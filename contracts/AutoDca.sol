@@ -7,7 +7,7 @@ import "@aave/periphery-v3/contracts/rewards/interfaces/IRewardsController.sol";
 import "@aave/core-v3/contracts/interfaces/IPoolAddressesProvider.sol";
 import "@aave/core-v3/contracts/interfaces/IPool.sol";
 
-contract Claimer is KeeperCompatibleInterface, Ownable {
+contract AutoDca is KeeperCompatibleInterface, Ownable {
     uint256 public counter;
     uint256 public immutable interval;
     uint256 public lastTimeStamp;
