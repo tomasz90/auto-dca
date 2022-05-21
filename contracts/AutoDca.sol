@@ -18,12 +18,11 @@ contract AutoDca is KeeperCompatibleInterface, Pausable, Ownable {
 
     uint256 public amount;
 
-    IERC20 public immutable stableToken;
-    IERC20 public immutable dcaIntoToken;
-
-    uint24 public immutable poolFee;
+    IERC20 public stableToken;
+    IERC20 public dcaIntoToken;
 
     ISwapRouter uniswapRouter;
+    IUniswapV3Factory uniswapFactory;
 
     address public keeperRegistryAddress;
 
@@ -42,12 +41,15 @@ contract AutoDca is KeeperCompatibleInterface, Pausable, Ownable {
         interval = _interval;
         lastTimeStamp = block.timestamp;
         counter = 0;
+
         amount = _amount;
+
         stableToken = _stableToken;
         dcaIntoToken = _dcaIntoToken;
+
+        uniswapFactory = _uniswapFactory;
         uniswapRouter = _uniswapRouter;
         keeperRegistryAddress = _keeperRegistryAddress;
-        poolFee = findPoolFee(_uniswapFactory, _stableToken, _dcaIntoToken);
     }
 
     modifier onlyKeeperRegistry() {
@@ -66,7 +68,7 @@ contract AutoDca is KeeperCompatibleInterface, Pausable, Ownable {
         }
 
         uint256 balance = stableToken.balanceOf(address(this));
-        
+
         if(balance < amount) {
             return(false, performData);
         }
@@ -75,10 +77,15 @@ contract AutoDca is KeeperCompatibleInterface, Pausable, Ownable {
     }
 
     function performUpkeep(bytes calldata performData) external override onlyKeeperRegistry whenNotPaused {
+        counter++;
+        lastTimeStamp = block.timestamp;
+        
         uint256 balance = stableToken.balanceOf(address(this));
         require(balance >= amount, "Not enough funds");
 
         stableToken.approve(address(uniswapRouter), amount);
+
+        uint24 poolFee = findPoolFee();
 
         ISwapRouter.ExactInputSingleParams memory params =
             ISwapRouter.ExactInputSingleParams({
@@ -109,6 +116,14 @@ contract AutoDca is KeeperCompatibleInterface, Pausable, Ownable {
         interval = _interval;
     }
 
+    function setStableToken(IERC20 _token) public onlyOwner {
+        stableToken = _token;
+    }
+
+    function setDcaIntoToken(IERC20 _token) public onlyOwner {
+        dcaIntoToken = _token;
+    }
+
     function pause() external onlyOwner {
         _pause();
     }
@@ -122,21 +137,27 @@ contract AutoDca is KeeperCompatibleInterface, Pausable, Ownable {
         IERC20(token).transfer(owner(), balance);
     }
 
-    function findPoolFee(
-        IUniswapV3Factory _uniswapFactory,
-        IERC20 _stableToken,
-        IERC20 _dcaIntoToken
-    ) private view returns (uint24) {
+    function findPoolFee() private returns (uint24) {
         uint24[3] memory fee = [uint24(100), uint24(500), uint24(3000)];
         for (uint256 i; i < fee.length; i++) {
-            address poolAddress = _uniswapFactory.getPool(
-                address(_stableToken),
-                address(_dcaIntoToken),
+            address poolAddress = uniswapFactory.getPool(
+                address(stableToken),
+                address(dcaIntoToken),
                 fee[i]
             );
             if (poolAddress != address(0)) {
                 return fee[i];
             }
         }
+
+        _pause(); // pause upkeep, there is no sense to perform upkeeps when swap cannot be done
+
+        string memory message = string(
+            abi.encodePacked("No pool with tokens: ", 
+            address(stableToken), 
+            ", ", 
+            address(dcaIntoToken)));
+
+        revert(message);
     }
 }
