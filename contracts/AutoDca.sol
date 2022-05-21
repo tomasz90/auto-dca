@@ -2,23 +2,26 @@
 pragma solidity ^0.8.0;
 
 import "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
+
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 
-contract AutoDca is KeeperCompatibleInterface, Ownable {
+contract AutoDca is KeeperCompatibleInterface, Pausable, Ownable {
 
     uint256 public counter;
-    uint256 public immutable interval;
     uint256 public lastTimeStamp;
+    uint256 public interval;
 
     uint256 public amount;
 
     IERC20 public immutable stableToken;
     IERC20 public immutable dcaIntoToken;
 
-    uint24 public poolFee;
+    uint24 public immutable poolFee;
 
     ISwapRouter uniswapRouter;
 
@@ -58,10 +61,14 @@ contract AutoDca is KeeperCompatibleInterface, Ownable {
         override
         returns (bool upkeepNeeded, bytes memory performData)
     {
-        upkeepNeeded = (block.timestamp - lastTimeStamp) > interval;
+        if(paused()) {
+            upkeepNeeded = false;
+        } else {
+            upkeepNeeded = (block.timestamp - lastTimeStamp) > interval;
+        }
     }
 
-    function performUpkeep(bytes calldata performData) external override onlyKeeperRegistry {
+    function performUpkeep(bytes calldata performData) external override onlyKeeperRegistry whenNotPaused {
         stableToken.transferFrom(owner(), address(this), amount);
         stableToken.approve(address(uniswapRouter), amount);
 
@@ -80,6 +87,28 @@ contract AutoDca is KeeperCompatibleInterface, Ownable {
         uniswapRouter.exactInputSingle(params);
     }
 
+    function setKeeperRegistryAddress(address _keeperRegistryAddress) external onlyOwner {
+        emit KeeperRegistryAddressUpdated(keeperRegistryAddress, _keeperRegistryAddress);
+        keeperRegistryAddress = _keeperRegistryAddress;
+    }
+
+    function setAmount(uint256 _amount) external onlyOwner {
+        emit AmountUpdated(amount, _amount);
+        amount = _amount;
+    }
+
+    function setInterval(uint256 _interval) external onlyOwner {
+        interval = _interval;
+    }
+
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    function unpause() external onlyOwner {
+        _unpause();
+    }
+
     function findPoolFee(
         IUniswapV3Factory _uniswapFactory,
         IERC20 _stableToken,
@@ -96,15 +125,5 @@ contract AutoDca is KeeperCompatibleInterface, Ownable {
                 return fee[i];
             }
         }
-    }
-
-    function setKeeperRegistryAddress(address _keeperRegistryAddress) external onlyOwner {
-        emit KeeperRegistryAddressUpdated(keeperRegistryAddress, _keeperRegistryAddress);
-        keeperRegistryAddress = _keeperRegistryAddress;
-    }
-
-    function setAmount(uint _amount) external onlyOwner {
-        emit AmountUpdated(amount, _amount);
-        amount = _amount;
     }
 }
