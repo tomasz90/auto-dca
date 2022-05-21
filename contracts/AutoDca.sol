@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
-import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
+import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 contract AutoDca is KeeperCompatibleInterface, Pausable, Ownable {
 
@@ -21,7 +21,6 @@ contract AutoDca is KeeperCompatibleInterface, Pausable, Ownable {
     IERC20 public stableToken;
     IERC20 public dcaIntoToken;
 
-    ISwapRouter uniswapRouter;
     IUniswapV3Factory uniswapFactory;
 
     address public keeperRegistryAddress;
@@ -35,7 +34,6 @@ contract AutoDca is KeeperCompatibleInterface, Pausable, Ownable {
         IERC20 _stableToken,
         IERC20 _dcaIntoToken,
         IUniswapV3Factory _uniswapFactory,
-        ISwapRouter _uniswapRouter,
         address _keeperRegistryAddress
     ) {
         interval = _interval;
@@ -48,7 +46,6 @@ contract AutoDca is KeeperCompatibleInterface, Pausable, Ownable {
         dcaIntoToken = _dcaIntoToken;
 
         uniswapFactory = _uniswapFactory;
-        uniswapRouter = _uniswapRouter;
         keeperRegistryAddress = _keeperRegistryAddress;
     }
 
@@ -83,23 +80,14 @@ contract AutoDca is KeeperCompatibleInterface, Pausable, Ownable {
         uint256 balance = stableToken.balanceOf(address(this));
         require(balance >= amount, "Not enough funds");
 
-        stableToken.approve(address(uniswapRouter), amount);
+        IUniswapV3Pool pool = findPool();
 
-        uint24 poolFee = findPoolFee();
+        stableToken.approve(address(pool), amount);
 
-        ISwapRouter.ExactInputSingleParams memory params =
-            ISwapRouter.ExactInputSingleParams({
-                tokenIn: address(stableToken),
-                tokenOut: address(dcaIntoToken),
-                fee: poolFee,
-                recipient: address(this),
-                deadline: block.timestamp + 60,
-                amountIn: amount,
-                amountOutMinimum: 0,
-                sqrtPriceLimitX96: 0
-            });
+        bool zeroForOne = address(stableToken) < address(dcaIntoToken);
 
-        uniswapRouter.exactInputSingle(params);
+        pool.swap(address(this), zeroForOne, int256(amount), 0, "");
+
     }
 
     function setKeeperRegistryAddress(address _keeperRegistryAddress) external onlyOwner {
@@ -137,7 +125,7 @@ contract AutoDca is KeeperCompatibleInterface, Pausable, Ownable {
         IERC20(token).transfer(owner(), balance);
     }
 
-    function findPoolFee() private returns (uint24) {
+    function findPool() private returns (IUniswapV3Pool) {
         uint24[3] memory fee = [uint24(100), uint24(500), uint24(3000)];
         for (uint256 i; i < fee.length; i++) {
             address poolAddress = uniswapFactory.getPool(
@@ -146,7 +134,7 @@ contract AutoDca is KeeperCompatibleInterface, Pausable, Ownable {
                 fee[i]
             );
             if (poolAddress != address(0)) {
-                return fee[i];
+                return IUniswapV3Pool(poolAddress);
             }
         }
 

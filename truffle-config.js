@@ -20,6 +20,16 @@ module.exports = {
             skipDryRun: true,
             gas: 5000000,
             gasPrice: 20000000000,
+        },
+        rinkeby: {
+            provider: () => new HDWalletProvider(process.env.MNEMONIC, 
+            "https://rinkeby.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"),
+            network_id: 4,
+            confirmations: 2,
+            timeoutBlocks: 1000,
+            skipDryRun: true,
+            gas: 5000000,
+            gasPrice: 20000000000,
         }
     },
     compilers: {
@@ -30,6 +40,7 @@ module.exports = {
     plugins: ['truffle-plugin-verify'],
     
     api_keys: {
-        polygonscan: process.env.POLYGON_SCAN_API_KEY
+        polygonscan: process.env.POLYGON_SCAN_API_KEY,
+        etherscan: process.env.ETHERSCAN_API_KEY
       }
 };
