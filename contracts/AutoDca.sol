@@ -61,9 +61,7 @@ contract AutoDca is KeeperCompatibleInterface, Pausable, Ownable {
         override
         returns (bool upkeepNeeded, bytes memory performData)
     {
-        if(paused()) {
-            upkeepNeeded = false;
-        } else {
+        if(!paused()) {
             upkeepNeeded = (block.timestamp - lastTimeStamp) > interval;
         }
     }
