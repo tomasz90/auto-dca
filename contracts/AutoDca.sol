@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
 import "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
@@ -7,6 +8,7 @@ import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 
 contract AutoDca is KeeperCompatibleInterface, Ownable {
+
     uint256 public counter;
     uint256 public immutable interval;
     uint256 public lastTimeStamp;
@@ -31,7 +33,8 @@ contract AutoDca is KeeperCompatibleInterface, Ownable {
         IERC20 _stableToken,
         IERC20 _dcaIntoToken,
         IUniswapV3Factory _uniswapFactory,
-        ISwapRouter _uniswapRouter
+        ISwapRouter _uniswapRouter,
+        address _keeperRegistryAddress
     ) {
         interval = _interval;
         lastTimeStamp = block.timestamp;
@@ -39,8 +42,9 @@ contract AutoDca is KeeperCompatibleInterface, Ownable {
         amount = _amount;
         stableToken = _stableToken;
         dcaIntoToken = _dcaIntoToken;
-        poolFee = findPoolFee(_uniswapFactory, _stableToken, _dcaIntoToken);
         uniswapRouter = _uniswapRouter;
+        keeperRegistryAddress = _keeperRegistryAddress;
+        poolFee = findPoolFee(_uniswapFactory, _stableToken, _dcaIntoToken);
     }
 
     modifier onlyKeeperRegistry() {
@@ -57,7 +61,7 @@ contract AutoDca is KeeperCompatibleInterface, Ownable {
         upkeepNeeded = (block.timestamp - lastTimeStamp) > interval;
     }
 
-    function performUpkeep(bytes calldata performData) external onlyKeeperRegistry override {
+    function performUpkeep(bytes calldata performData) external override onlyKeeperRegistry {
         stableToken.transferFrom(owner(), address(this), amount);
         stableToken.approve(address(uniswapRouter), amount);
 
