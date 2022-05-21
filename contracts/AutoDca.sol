@@ -61,13 +61,23 @@ contract AutoDca is KeeperCompatibleInterface, Pausable, Ownable {
         override
         returns (bool upkeepNeeded, bytes memory performData)
     {
-        if(!paused()) {
-            upkeepNeeded = (block.timestamp - lastTimeStamp) > interval;
+        if(paused()) {
+            return(false, performData);
         }
+
+        uint256 balance = stableToken.balanceOf(address(this));
+        
+        if(balance < amount) {
+            return(false, performData);
+        }
+
+        upkeepNeeded = (block.timestamp - lastTimeStamp) > interval;
     }
 
     function performUpkeep(bytes calldata performData) external override onlyKeeperRegistry whenNotPaused {
-        stableToken.transferFrom(owner(), address(this), amount);
+        uint256 balance = stableToken.balanceOf(address(this));
+        require(balance >= amount, "Not enough funds");
+
         stableToken.approve(address(uniswapRouter), amount);
 
         ISwapRouter.ExactInputSingleParams memory params =
@@ -75,7 +85,7 @@ contract AutoDca is KeeperCompatibleInterface, Pausable, Ownable {
                 tokenIn: address(stableToken),
                 tokenOut: address(dcaIntoToken),
                 fee: poolFee,
-                recipient: owner(),
+                recipient: address(this),
                 deadline: block.timestamp + 60,
                 amountIn: amount,
                 amountOutMinimum: 0,
@@ -105,6 +115,11 @@ contract AutoDca is KeeperCompatibleInterface, Pausable, Ownable {
 
     function unpause() external onlyOwner {
         _unpause();
+    }
+
+    function withdraw(address token) external onlyOwner {
+        uint256 balance = IERC20(token).balanceOf(address(this));
+        IERC20(token).transfer(owner(), balance);
     }
 
     function findPoolFee(
