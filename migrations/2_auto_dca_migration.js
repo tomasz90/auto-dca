@@ -1,7 +1,7 @@
 const AutoDca = artifacts.require("AutoDca");
 
 // Polygon Mumbai
-const interval = "3600";
+const interval = "60";
 const amount = "1000";
 const stableToken = "0xe11A86849d99F524cAC3E7A0Ec1241828e332C62";
 const dcaIntoToken = "0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889";

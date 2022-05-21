@@ -19,12 +19,17 @@ module.exports = {
             timeoutBlocks: 1000,
             skipDryRun: true,
             gas: 5000000,
-            gasPrice: 10000000000,
+            gasPrice: 20000000000,
         }
     },
     compilers: {
         solc: {
             version: "0.8.6"
         }
-    }
+    },
+    plugins: ['truffle-plugin-verify'],
+    
+    api_keys: {
+        polygonscan: process.env.POLYGON_SCAN_API_KEY
+      }
 };
