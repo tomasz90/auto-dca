@@ -97,10 +97,10 @@ contract AutoDca is KeeperCompatibleInterface, Ownable {
     function setKeeperRegistryAddress(address _keeperRegistryAddress) external onlyOwner {
         emit KeeperRegistryAddressUpdated(keeperRegistryAddress, _keeperRegistryAddress);
         keeperRegistryAddress = _keeperRegistryAddress;
-  }
+    }
 
-  function setAmount(uint _amount) external onlyOwner {
+    function setAmount(uint _amount) external onlyOwner {
         emit AmountUpdated(amount, _amount);
         amount = _amount;
-  }
+    }
 }
