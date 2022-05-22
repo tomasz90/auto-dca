@@ -10,7 +10,7 @@ contract AccountManager {
     mapping(address => AccountParams) public accountsParams;
     address[] public accounts;
     
-    address autoDca;
+    address public immutable autoDca;
 
     IUniswapV3Factory public immutable uniswapFactory;
 
@@ -34,22 +34,39 @@ contract AccountManager {
         autoDca = _autoDca;
     }
 
-    function setUpAccount(uint256 _interval, uint256 _amount, IERC20 _stableToken, IERC20 _dcaIntoToken) external {
-        IUniswapV3Pool pool = findPool(_stableToken, _dcaIntoToken);
+    function setUpAccount(uint256 interval, uint256 amount, IERC20 stableToken, IERC20 dcaIntoToken) external {
+        IUniswapV3Pool pool = findPool(stableToken, dcaIntoToken);
         AccountParams memory params = AccountParams(
-            _interval,
-            block.timestamp + _interval,
-            _amount,
+            interval,
+            block.timestamp + interval,
+            amount,
             pool,
-            _stableToken,
-            _dcaIntoToken,
+            stableToken,
+            dcaIntoToken,
             false
         );
+        bool notExists = accountsParams[msg.sender].nextKeepUp == 0;
         accountsParams[msg.sender] = params;
-        accounts.push(msg.sender);
+        if(notExists) {
+            accounts.push(msg.sender);
+        }
     }
 
-    function getUserNeedKeepUp() external view returns (address user){
+    function pause() external {
+        bool exists = accountsParams[msg.sender].nextKeepUp != 0;
+        if(exists) {
+            accountsParams[msg.sender].paused = true;
+        }
+    }
+
+    function unpause() external {
+        bool exists = accountsParams[msg.sender].nextKeepUp != 0;
+        if(exists) {
+            accountsParams[msg.sender].paused = false;
+        }
+    }
+
+    function getUserNeedKeepUp() external view returns (address user) {
         for(uint i; i < accounts.length; i++) {
             AccountParams memory account = accountsParams[accounts[i]];
             uint256 nextKeepUp = account.nextKeepUp;
@@ -93,8 +110,8 @@ contract AccountManager {
         revert(message);
     }
 
-    function isSpendable(address user, IERC20 stableToken, uint256 amount) private view returns(bool) {
-        uint256 allowance = stableToken.allowance(user, address(this));
+    function isSpendable(address user, IERC20 stableToken, uint256 amount) private view returns (bool) {
+        uint256 allowance = stableToken.allowance(user, address(this)); //todo should be autodca!!
         return stableToken.balanceOf(user) > amount
             && allowance > amount;
     }

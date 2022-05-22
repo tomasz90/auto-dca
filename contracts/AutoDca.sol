@@ -1,53 +1,48 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
-
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
 
-import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 import "./AccountManager.sol";
 
-contract AutoDca is KeeperCompatibleInterface, Ownable {
+contract AutoDca is Ownable {
 
     uint256 public counter;
-    address public keeperRegistryAddress;
+    address public executorAddress;
     AccountManager public immutable manager;
 
-    event KeeperRegistryAddressUpdated(address oldAddress, address newAddress);
+    event ExecutorAddressUpdated(address oldAddress, address newAddress);
     event AmountUpdated(uint256 oldAmount, uint256 newAmount);
 
     constructor(
         IUniswapV3Factory _uniswapFactory,
-        address _keeperRegistryAddress
+        address _executorAddress
     ) {
         counter = 0;
-        keeperRegistryAddress = _keeperRegistryAddress;
+        executorAddress = _executorAddress;
         manager = new AccountManager(_uniswapFactory, address(this));
     }
 
     modifier onlyKeeperRegistry() {
-        require(msg.sender == keeperRegistryAddress, "Caller is not the keeper registry");
+        require(msg.sender == executorAddress, "Caller is not the keeper registry");
         _;
     }
 
-    function checkUpkeep(bytes calldata checkData)
+    function checker()
         external
         view
-        override
-        returns (bool upkeepNeeded, bytes memory performData)
+        returns (bool canExec, bytes memory execPayload)
     {   
         address user = manager.getUserNeedKeepUp();
-        if(upkeepNeeded = user != address(0)) {
-            performData = abi.encode(user);
+        if(canExec = user != address(0)) {
+            execPayload = abi.encodeWithSelector(AutoDca.exec.selector, user);
         }
     }
 
-    function performUpkeep(bytes calldata performData) external override onlyKeeperRegistry {
-        address user = abi.decode(performData, (address));
+    function exec(bytes calldata execPayload) external {
+        address user = abi.decode(execPayload, (address));
         counter++;
         manager.setUserNextKeepUp(user);
         (IUniswapV3Pool pool, IERC20 stableToken, IERC20 dcaIntoToken, uint256 amount)
@@ -55,9 +50,9 @@ contract AutoDca is KeeperCompatibleInterface, Ownable {
         swap(user, pool, stableToken, dcaIntoToken, amount);
     }
 
-    function setKeeperRegistryAddress(address _keeperRegistryAddress) external onlyOwner {
-        emit KeeperRegistryAddressUpdated(keeperRegistryAddress, _keeperRegistryAddress);
-        keeperRegistryAddress = _keeperRegistryAddress;
+    function setExecutor(address _executorAddress) external onlyOwner {
+        emit ExecutorAddressUpdated(executorAddress, _executorAddress);
+        executorAddress = _executorAddress;
     }
 
     function swap(address user, IUniswapV3Pool pool, IERC20 stableToken, IERC20 dcaIntoToken, uint256 amount) private {
