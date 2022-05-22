@@ -4,30 +4,23 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 
 import "./AccountManager.sol";
 
 contract AutoDca is Ownable {
 
     uint256 public counter;
-    address public executorAddress;
     AccountManager public immutable manager;
-
-    event ExecutorAddressUpdated(address oldAddress, address newAddress);
-    event AmountUpdated(uint256 oldAmount, uint256 newAmount);
+    ISwapRouter router;
 
     constructor(
         IUniswapV3Factory _uniswapFactory,
-        address _executorAddress
+        ISwapRouter _router
     ) {
         counter = 0;
-        executorAddress = _executorAddress;
+        router = _router;
         manager = new AccountManager(_uniswapFactory, address(this));
-    }
-
-    modifier onlyKeeperRegistry() {
-        require(msg.sender == executorAddress, "Caller is not the keeper registry");
-        _;
     }
 
     function checker()
@@ -36,7 +29,8 @@ contract AutoDca is Ownable {
         returns (bool canExec, bytes memory execPayload)
     {   
         address user = manager.getUserNeedKeepUp();
-        if(canExec = user != address(0)) {
+        if(user != address(0)) {
+            canExec = true;
             execPayload = abi.encodeWithSelector(AutoDca.exec.selector, user);
         }
     }
@@ -45,24 +39,26 @@ contract AutoDca is Ownable {
         address user = abi.decode(execPayload, (address));
         counter++;
         manager.setUserNextKeepUp(user);
-        (IUniswapV3Pool pool, IERC20 stableToken, IERC20 dcaIntoToken, uint256 amount)
+        (uint24 poolFee, IERC20 stableToken, IERC20 dcaIntoToken, uint256 amount)
             = manager.getSwapParams(user);
-        swap(user, pool, stableToken, dcaIntoToken, amount);
+        swap(user, poolFee, stableToken, dcaIntoToken, amount);
     }
 
-    function setExecutor(address _executorAddress) external onlyOwner {
-        emit ExecutorAddressUpdated(executorAddress, _executorAddress);
-        executorAddress = _executorAddress;
-    }
+    function swap(address user, uint24 poolFee, IERC20 stableToken, IERC20 dcaIntoToken, uint256 amount) private {
+        stableToken.transferFrom(user, address(this), amount);
+        stableToken.approve(address(router), amount);
 
-    function swap(address user, IUniswapV3Pool pool, IERC20 stableToken, IERC20 dcaIntoToken, uint256 amount) private {
-        uint256 balance = stableToken.balanceOf(address(this));
-        require(balance >= amount, "Not enough funds");
+        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams(
+            address(stableToken),
+            address(dcaIntoToken),
+            poolFee,
+            user,
+            block.timestamp + 120,
+            100,
+            0,
+            0
+            );
 
-        stableToken.approve(address(pool), amount);
-
-        bool zeroForOne = address(stableToken) < address(dcaIntoToken);
-
-        pool.swap(user, zeroForOne, int256(amount), 0, "");
+        router.exactInputSingle(params);
     }
 }

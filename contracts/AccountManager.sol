@@ -18,7 +18,7 @@ contract AccountManager {
         uint256 interval;
         uint256 nextKeepUp;
         uint256 amount;
-        IUniswapV3Pool pool;
+        uint24 poolFee;
         IERC20 stableToken;
         IERC20 dcaIntoToken;
         bool paused;
@@ -35,12 +35,12 @@ contract AccountManager {
     }
 
     function setUpAccount(uint256 interval, uint256 amount, IERC20 stableToken, IERC20 dcaIntoToken) external {
-        IUniswapV3Pool pool = findPool(stableToken, dcaIntoToken);
+        uint24 poolFee = findPool(stableToken, dcaIntoToken);
         AccountParams memory params = AccountParams(
             interval,
             block.timestamp + interval,
             amount,
-            pool,
+            poolFee,
             stableToken,
             dcaIntoToken,
             false
@@ -81,14 +81,14 @@ contract AccountManager {
         accountsParams[user].nextKeepUp += accountsParams[user].interval;
     }
 
-    function getSwapParams(address user) external view returns (IUniswapV3Pool pool, IERC20 stableToken, IERC20 dcaIntoToken, uint256 amount) {
-        pool = accountsParams[user].pool;
+    function getSwapParams(address user) external view returns (uint24 poolFee, IERC20 stableToken, IERC20 dcaIntoToken, uint256 amount) {
+        poolFee = accountsParams[user].poolFee;
         stableToken = accountsParams[user].stableToken;
         dcaIntoToken = accountsParams[user].dcaIntoToken;
         amount = accountsParams[user].amount;
     }
 
-    function findPool(IERC20 stableToken, IERC20 dcaIntoToken) private view returns (IUniswapV3Pool) {
+    function findPool(IERC20 stableToken, IERC20 dcaIntoToken) private view returns (uint24) {
         uint24[3] memory fee = [uint24(100), uint24(500), uint24(3000)];
         for (uint256 i; i < fee.length; i++) {
             address poolAddress = uniswapFactory.getPool(
@@ -97,7 +97,7 @@ contract AccountManager {
                 fee[i]
             );
             if (poolAddress != address(0)) {
-                return IUniswapV3Pool(poolAddress);
+                return fee[i];
             }
         }
 
@@ -111,7 +111,7 @@ contract AccountManager {
     }
 
     function isSpendable(address user, IERC20 stableToken, uint256 amount) private view returns (bool) {
-        uint256 allowance = stableToken.allowance(user, address(this)); //todo should be autodca!!
+        uint256 allowance = stableToken.allowance(user, autoDca);
         return stableToken.balanceOf(user) > amount
             && allowance > amount;
     }
