@@ -31,7 +31,8 @@ contract AutoDca is Ownable {
         address user = manager.getUserNeedKeepUp();
         if(user != address(0)) {
             canExec = true;
-            execPayload = abi.encodeWithSelector(AutoDca.exec.selector, user);
+            bytes memory payload = abi.encode(user);
+            execPayload = abi.encodeWithSelector(AutoDca.exec.selector, payload);
         }
     }
 
