@@ -8,19 +8,18 @@ import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 
 import "./AccountManager.sol";
-import "./IOps.sol";
 
 contract AutoDca is Ownable {
 
     uint256 public counter;
     AccountManager public immutable manager;
     ISwapRouter router;
-    IOps public immutable ops;
+    address public immutable ops;
 
     constructor(
         IUniswapV3Factory _uniswapFactory,
         ISwapRouter _router,
-        IOps _ops 
+        address _ops 
     ) {
         counter = 0;
         router = _router;
@@ -29,7 +28,7 @@ contract AutoDca is Ownable {
     }
 
     modifier onlyExecutor() {
-        if(msg.sender != address(ops)) {
+        if(msg.sender != ops) {
             string memory sender = Strings.toHexString(uint256(uint160(msg.sender)), 20);
             string memory message = string(abi.encodePacked("Sender is not an Executor: ", sender));
             revert(message);
