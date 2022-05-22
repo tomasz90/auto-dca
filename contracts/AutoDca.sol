@@ -36,8 +36,7 @@ contract AutoDca is Ownable {
         _;
     }
 
-    modifier onlyInRightTime(bytes memory execPayload) {
-        address user = abi.decode(execPayload, (address));
+    modifier onlyInRightTime(address user) {
         require(manager.isExecTime(user), "Require right time for calling");
         _;
     }
@@ -50,13 +49,11 @@ contract AutoDca is Ownable {
         address user = manager.getUserNeedExec();
         if(user != address(0)) {
             canExec = true;
-            bytes memory payload = abi.encode(user);
-            execPayload = abi.encodeWithSelector(AutoDca.exec.selector, payload);
+            execPayload = abi.encodeWithSelector(AutoDca.exec.selector, user);
         }
     }
 
-    function exec(bytes calldata execPayload) external onlyExecutor onlyInRightTime(execPayload) {
-        address user = abi.decode(execPayload, (address));
+    function exec(address user) external onlyExecutor onlyInRightTime(user) {
         counter++;
         manager.setUserNextExec(user);
         (uint24 poolFee, IERC20 stableToken, IERC20 dcaIntoToken, uint256 amount)
