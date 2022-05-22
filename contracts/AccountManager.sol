@@ -16,7 +16,7 @@ contract AccountManager {
 
     struct AccountParams {
         uint256 interval;
-        uint256 nextKeepUp;
+        uint256 nextExec;
         uint256 amount;
         uint24 poolFee;
         IERC20 stableToken;
@@ -45,7 +45,7 @@ contract AccountManager {
             dcaIntoToken,
             false
         );
-        bool notExists = accountsParams[msg.sender].nextKeepUp == 0;
+        bool notExists = accountsParams[msg.sender].nextExec == 0;
         accountsParams[msg.sender] = params;
         if(notExists) {
             accounts.push(msg.sender);
@@ -53,32 +53,36 @@ contract AccountManager {
     }
 
     function pause() external {
-        bool exists = accountsParams[msg.sender].nextKeepUp != 0;
+        bool exists = accountsParams[msg.sender].nextExec != 0;
         if(exists) {
             accountsParams[msg.sender].paused = true;
         }
     }
 
     function unpause() external {
-        bool exists = accountsParams[msg.sender].nextKeepUp != 0;
+        bool exists = accountsParams[msg.sender].nextExec != 0;
         if(exists) {
             accountsParams[msg.sender].paused = false;
         }
     }
 
-    function getUserNeedKeepUp() external view returns (address user) {
+    function getUserNeedExec() external view returns (address user) {
         for(uint i; i < accounts.length; i++) {
             AccountParams memory account = accountsParams[accounts[i]];
-            uint256 nextKeepUp = account.nextKeepUp;
+            uint256 nextExec = account.nextExec;
             bool spendable = isSpendable(accounts[i], account.stableToken, account.amount);
-            if(nextKeepUp < block.timestamp && spendable) {
+            if(nextExec < block.timestamp && spendable) {
                 user = accounts[i];
             }
         }
     }
 
-    function setUserNextKeepUp(address user) external onlyAutoDca {
-        accountsParams[user].nextKeepUp += accountsParams[user].interval;
+    function isExecTime(address user) external view returns(bool) {
+        return accountsParams[user].nextExec < block.timestamp;
+    }
+
+    function setUserNextExec(address user) external onlyAutoDca {
+        accountsParams[user].nextExec += accountsParams[user].interval;
     }
 
     function getSwapParams(address user) external view returns (uint24 poolFee, IERC20 stableToken, IERC20 dcaIntoToken, uint256 amount) {
