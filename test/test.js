@@ -58,7 +58,7 @@ contract("AccountManager", (accounts) => {
         let account = await accountManager.accounts(0);
         await sleep(3);
         // here should be any transaction that force block to be mined and change block.timestamp
-        await accountManager.setUpAccount(50, 34, token0, token1, { from: accounts[1] });
+        await accountManager.setUpAccount(50, 200, token0, token1, { from: accounts[1] });
         let isTime = await accountManager.isExecTime(account);
         assert.isTrue(isTime);
     });

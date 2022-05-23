@@ -10,7 +10,6 @@ import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 import "./AccountManager.sol";
 
 contract AutoDca is Ownable {
-
     uint256 public counter;
     AccountManager public immutable manager;
     ISwapRouter router;
@@ -19,7 +18,7 @@ contract AutoDca is Ownable {
     constructor(
         IUniswapV3Factory _uniswapFactory,
         ISwapRouter _router,
-        address _ops 
+        address _ops
     ) {
         counter = 0;
         router = _router;
@@ -28,7 +27,7 @@ contract AutoDca is Ownable {
     }
 
     modifier onlyExecutor() {
-        if(msg.sender != ops) {
+        if (msg.sender != ops) {
             string memory sender = Strings.toHexString(uint256(uint160(msg.sender)), 20);
             string memory message = string(abi.encodePacked("Sender is not an Executor: ", sender));
             revert(message);
@@ -41,13 +40,9 @@ contract AutoDca is Ownable {
         _;
     }
 
-    function checker()
-        external
-        view
-        returns (bool canExec, bytes memory execPayload)
-    {   
+    function checker() external view returns (bool canExec, bytes memory execPayload) {
         address user = manager.getUserNeedExec();
-        if(user != address(0)) {
+        if (user != address(0)) {
             canExec = true;
             execPayload = abi.encodeWithSelector(AutoDca.exec.selector, user);
         }
@@ -56,12 +51,17 @@ contract AutoDca is Ownable {
     function exec(address user) external onlyExecutor onlyInRightTime(user) {
         counter++;
         manager.setUserNextExec(user);
-        (uint24 poolFee, IERC20 stableToken, IERC20 dcaIntoToken, uint256 amount)
-            = manager.getSwapParams(user);
+        (uint24 poolFee, IERC20 stableToken, IERC20 dcaIntoToken, uint256 amount) = manager.getSwapParams(user);
         swap(user, poolFee, stableToken, dcaIntoToken, amount);
     }
 
-    function swap(address user, uint24 poolFee, IERC20 stableToken, IERC20 dcaIntoToken, uint256 amount) private {
+    function swap(
+        address user,
+        uint24 poolFee,
+        IERC20 stableToken,
+        IERC20 dcaIntoToken,
+        uint256 amount
+    ) private {
         stableToken.transferFrom(user, address(this), amount);
         stableToken.approve(address(router), amount);
 
@@ -74,7 +74,7 @@ contract AutoDca is Ownable {
             100,
             0,
             0
-            );
+        );
 
         router.exactInputSingle(params);
     }

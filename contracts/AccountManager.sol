@@ -5,11 +5,11 @@ import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-contract AccountManager {
 
+contract AccountManager {
     mapping(address => AccountParams) public accountsParams;
     address[] public accounts;
-    
+
     address public immutable autoDca;
 
     IUniswapV3Factory public immutable uniswapFactory;
@@ -34,7 +34,12 @@ contract AccountManager {
         autoDca = _autoDca;
     }
 
-    function setUpAccount(uint256 interval, uint256 amount, IERC20 stableToken, IERC20 dcaIntoToken) external {
+    function setUpAccount(
+        uint256 interval,
+        uint256 amount,
+        IERC20 stableToken,
+        IERC20 dcaIntoToken
+    ) external {
         uint24 poolFee = findPool(stableToken, dcaIntoToken);
         AccountParams memory params = AccountParams(
             interval,
@@ -47,37 +52,37 @@ contract AccountManager {
         );
         bool notExists = accountsParams[msg.sender].nextExec == 0;
         accountsParams[msg.sender] = params;
-        if(notExists) {
+        if (notExists) {
             accounts.push(msg.sender);
         }
     }
 
     function pause() external {
         bool exists = accountsParams[msg.sender].nextExec != 0;
-        if(exists) {
+        if (exists) {
             accountsParams[msg.sender].paused = true;
         }
     }
 
     function unpause() external {
         bool exists = accountsParams[msg.sender].nextExec != 0;
-        if(exists) {
+        if (exists) {
             accountsParams[msg.sender].paused = false;
         }
     }
 
     function getUserNeedExec() external view returns (address user) {
-        for(uint i; i < accounts.length; i++) {
+        for (uint256 i; i < accounts.length; i++) {
             AccountParams memory account = accountsParams[accounts[i]];
             uint256 nextExec = account.nextExec;
             bool spendable = isSpendable(accounts[i], account.stableToken, account.amount);
-            if(nextExec < block.timestamp && spendable) {
+            if (nextExec < block.timestamp && spendable) {
                 user = accounts[i];
             }
         }
     }
 
-    function isExecTime(address user) external view returns(bool) {
+    function isExecTime(address user) external view returns (bool) {
         return accountsParams[user].nextExec < block.timestamp;
     }
 
@@ -85,7 +90,16 @@ contract AccountManager {
         accountsParams[user].nextExec += accountsParams[user].interval;
     }
 
-    function getSwapParams(address user) external view returns (uint24 poolFee, IERC20 stableToken, IERC20 dcaIntoToken, uint256 amount) {
+    function getSwapParams(address user)
+        external
+        view
+        returns (
+            uint24 poolFee,
+            IERC20 stableToken,
+            IERC20 dcaIntoToken,
+            uint256 amount
+        )
+    {
         poolFee = accountsParams[user].poolFee;
         stableToken = accountsParams[user].stableToken;
         dcaIntoToken = accountsParams[user].dcaIntoToken;
@@ -95,28 +109,25 @@ contract AccountManager {
     function findPool(IERC20 stableToken, IERC20 dcaIntoToken) private view returns (uint24) {
         uint24[3] memory fee = [uint24(100), uint24(500), uint24(3000)];
         for (uint256 i; i < fee.length; i++) {
-            address poolAddress = uniswapFactory.getPool(
-                address(stableToken),
-                address(dcaIntoToken),
-                fee[i]
-            );
+            address poolAddress = uniswapFactory.getPool(address(stableToken), address(dcaIntoToken), fee[i]);
             if (poolAddress != address(0)) {
                 return fee[i];
             }
         }
 
         string memory message = string(
-            abi.encodePacked("No pool with tokens: ", 
-            address(stableToken), 
-            ", ", 
-            address(dcaIntoToken)));
+            abi.encodePacked("No pool with tokens: ", address(stableToken), ", ", address(dcaIntoToken))
+        );
 
         revert(message);
     }
 
-    function isSpendable(address user, IERC20 stableToken, uint256 amount) private view returns (bool) {
+    function isSpendable(
+        address user,
+        IERC20 stableToken,
+        uint256 amount
+    ) private view returns (bool) {
         uint256 allowance = stableToken.allowance(user, autoDca);
-        return stableToken.balanceOf(user) > amount
-            && allowance > amount;
+        return stableToken.balanceOf(user) > amount && allowance > amount;
     }
 }
