@@ -32,7 +32,7 @@ contract("AccountManager", (accounts) => {
     it('should pause account', async () => {
         let account = await accountManager.accounts(0);
         assert.equal(account, accounts[0]);
-        await accountManager.pause();
+        await accountManager.setPause();
         let paused = (await accountManager.accountsParams(account)).paused;
         assert.isTrue(paused);
     });
@@ -40,10 +40,10 @@ contract("AccountManager", (accounts) => {
     it('should unpause account', async () => {
         let account = await accountManager.accounts(0);
         assert.equal(account, accounts[0]);
-        await accountManager.pause();
+        await accountManager.setPause();
         let paused = (await accountManager.accountsParams(account)).paused;
         assert.isTrue(paused);
-        await accountManager.unpause();
+        await accountManager.setUnpause();
         paused = (await accountManager.accountsParams(account)).paused;
         assert.isFalse(paused);
     });

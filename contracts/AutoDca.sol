@@ -50,7 +50,7 @@ contract AutoDca is Ownable {
 
     function exec(address user) external onlyExecutor onlyInRightTime(user) {
         counter++;
-        manager.setUserNextExec(user);
+        manager.setNextExec(user);
         (uint24 poolFee, IERC20 stableToken, IERC20 dcaIntoToken, uint256 amount) = manager.getSwapParams(user);
         swap(user, poolFee, stableToken, dcaIntoToken, amount);
     }

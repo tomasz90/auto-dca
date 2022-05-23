@@ -57,14 +57,46 @@ contract AccountManager {
         }
     }
 
-    function pause() external {
+    function setInterval(uint256 interval) external {
+        bool exists = accountsParams[msg.sender].nextExec != 0;
+        if (exists) {
+            accountsParams[msg.sender].interval = interval;
+        }
+    }
+
+    function setAmount(uint256 amount) external {
+        bool exists = accountsParams[msg.sender].nextExec != 0;
+        if (exists) {
+            accountsParams[msg.sender].amount = amount;
+        }
+    }
+
+    function setStableToken(IERC20 token) external {
+        bool exists = accountsParams[msg.sender].nextExec != 0;
+        if (exists) {
+            accountsParams[msg.sender].stableToken = token;
+        }
+    }
+
+    function setDcaIntoToken(IERC20 token) external {
+        bool exists = accountsParams[msg.sender].nextExec != 0;
+        if (exists) {
+            accountsParams[msg.sender].dcaIntoToken = token;
+        }
+    }
+
+    function setNextExec(address user) external onlyAutoDca {
+        accountsParams[user].nextExec += accountsParams[user].interval;
+    }
+
+    function setPause() external {
         bool exists = accountsParams[msg.sender].nextExec != 0;
         if (exists) {
             accountsParams[msg.sender].paused = true;
         }
     }
 
-    function unpause() external {
+    function setUnpause() external {
         bool exists = accountsParams[msg.sender].nextExec != 0;
         if (exists) {
             accountsParams[msg.sender].paused = false;
@@ -80,14 +112,6 @@ contract AccountManager {
                 user = accounts[i];
             }
         }
-    }
-
-    function isExecTime(address user) external view returns (bool) {
-        return accountsParams[user].nextExec < block.timestamp;
-    }
-
-    function setUserNextExec(address user) external onlyAutoDca {
-        accountsParams[user].nextExec += accountsParams[user].interval;
     }
 
     function getSwapParams(address user)
@@ -106,6 +130,19 @@ contract AccountManager {
         amount = accountsParams[user].amount;
     }
 
+    function isExecTime(address user) external view returns (bool) {
+        return accountsParams[user].nextExec < block.timestamp;
+    }
+
+    function isSpendable(
+        address user,
+        IERC20 stableToken,
+        uint256 amount
+    ) private view returns (bool) {
+        uint256 allowance = stableToken.allowance(user, autoDca);
+        return stableToken.balanceOf(user) > amount && allowance > amount;
+    }
+
     function findPool(IERC20 stableToken, IERC20 dcaIntoToken) private view returns (uint24) {
         uint24[3] memory fee = [uint24(100), uint24(500), uint24(3000)];
         for (uint256 i; i < fee.length; i++) {
@@ -120,14 +157,5 @@ contract AccountManager {
         );
 
         revert(message);
-    }
-
-    function isSpendable(
-        address user,
-        IERC20 stableToken,
-        uint256 amount
-    ) private view returns (bool) {
-        uint256 allowance = stableToken.allowance(user, autoDca);
-        return stableToken.balanceOf(user) > amount && allowance > amount;
     }
 }
