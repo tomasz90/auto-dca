@@ -13,7 +13,7 @@ contract("AccountManager", (accounts) => {
     beforeEach(async () => {
         uniswapV3Factory = await IUniswapV3FactoryMock.new();
         accountManager = await AccountManager.new(uniswapV3Factory.address, autoDca);
-        let interval = 120;
+        let interval = 2;
         let amount = 200;
         await accountManager.setUpAccount(interval, amount, token0, token1);
     });
@@ -34,7 +34,7 @@ contract("AccountManager", (accounts) => {
         assert.equal(account, accounts[0]);
         await accountManager.pause();
         let paused = (await accountManager.accountsParams(account)).paused;
-        assert.equal(paused, true);
+        assert.isTrue(paused);
     });
 
     it('should unpause account', async () => {
@@ -42,9 +42,28 @@ contract("AccountManager", (accounts) => {
         assert.equal(account, accounts[0]);
         await accountManager.pause();
         let paused = (await accountManager.accountsParams(account)).paused;
-        assert.equal(paused, true);
+        assert.isTrue(paused);
         await accountManager.unpause();
         paused = (await accountManager.accountsParams(account)).paused;
-        assert.equal(paused, false);
+        assert.isFalse(paused);
+    });
+
+    it('should return false for exec time', async () => {
+        let account = await accountManager.accounts(0);
+        let isTime = await accountManager.isExecTime(account);
+        assert.isFalse(isTime);
+    });
+
+    it('should return true for exec time', async () => {
+        let account = await accountManager.accounts(0);
+        await sleep(3);
+        // here should be any transaction that force block to be mined and change block.timestamp
+        await accountManager.setUpAccount(50, 34, token0, token1, { from: accounts[1] });
+        let isTime = await accountManager.isExecTime(account);
+        assert.isTrue(isTime);
     });
 });
+
+async function sleep(sec) {
+    await new Promise(resolve => setTimeout(resolve, sec * 1000));
+}
