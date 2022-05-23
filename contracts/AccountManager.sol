@@ -61,6 +61,8 @@ contract AccountManager {
         bool exists = accountsParams[msg.sender].nextExec != 0;
         if (exists) {
             accountsParams[msg.sender].interval = interval;
+        } else {
+            revert("Account does not exists yet");
         }
     }
 
@@ -68,6 +70,8 @@ contract AccountManager {
         bool exists = accountsParams[msg.sender].nextExec != 0;
         if (exists) {
             accountsParams[msg.sender].amount = amount;
+        } else {
+            revert("Account does not exists yet");
         }
     }
 
@@ -75,6 +79,8 @@ contract AccountManager {
         bool exists = accountsParams[msg.sender].nextExec != 0;
         if (exists) {
             accountsParams[msg.sender].stableToken = token;
+        } else {
+            revert("Account does not exists yet");
         }
     }
 
@@ -82,6 +88,8 @@ contract AccountManager {
         bool exists = accountsParams[msg.sender].nextExec != 0;
         if (exists) {
             accountsParams[msg.sender].dcaIntoToken = token;
+        } else {
+            revert("Account does not exists yet");
         }
     }
 
@@ -93,6 +101,8 @@ contract AccountManager {
         bool exists = accountsParams[msg.sender].nextExec != 0;
         if (exists) {
             accountsParams[msg.sender].paused = true;
+        } else {
+            revert("Account does not exists yet");
         }
     }
 
@@ -100,6 +110,8 @@ contract AccountManager {
         bool exists = accountsParams[msg.sender].nextExec != 0;
         if (exists) {
             accountsParams[msg.sender].paused = false;
+        } else {
+            revert("Account does not exists yet");
         }
     }
 
