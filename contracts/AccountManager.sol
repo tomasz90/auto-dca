@@ -118,9 +118,9 @@ contract AccountManager {
     function getUserNeedExec() external view returns (address user) {
         for (uint256 i; i < accounts.length; i++) {
             AccountParams memory account = accountsParams[accounts[i]];
-            uint256 nextExec = account.nextExec;
+            bool execTime = isExecTime(accounts[i]);
             bool spendable = isSpendable(accounts[i], account.stableToken, account.amount);
-            if (nextExec < block.timestamp && spendable) {
+            if (execTime && spendable) {
                 user = accounts[i];
             }
         }
@@ -142,7 +142,7 @@ contract AccountManager {
         amount = accountsParams[user].amount;
     }
 
-    function isExecTime(address user) external view returns (bool) {
+    function isExecTime(address user) public view returns (bool) {
         return accountsParams[user].nextExec < block.timestamp;
     }
 
