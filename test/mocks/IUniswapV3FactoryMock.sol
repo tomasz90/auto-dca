@@ -5,7 +5,13 @@ import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 
 contract IUniswapV3FactoryMock {
     
+    address pool;
+
     function getPool(address token0, address token1, uint24 fee) public view returns(address) {
-        return 0x0000000000000000000000000000000000000006;
+        return pool;
+    }
+
+    function setPool(address _pool) external {
+        pool = _pool;
     }
 }

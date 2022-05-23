@@ -5,6 +5,7 @@ import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 
 contract AccountManager {
     mapping(address => AccountParams) public accountsParams;
@@ -164,8 +165,10 @@ contract AccountManager {
             }
         }
 
+        string memory token0 = Strings.toHexString(uint256(uint160(address(stableToken))), 20);
+        string memory token1 = Strings.toHexString(uint256(uint160(address(dcaIntoToken))), 20);
         string memory message = string(
-            abi.encodePacked("No pool with tokens: ", address(stableToken), ", ", address(dcaIntoToken))
+            abi.encodePacked("No pool with tokens: ", token0, ", ", token1)
         );
 
         revert(message);

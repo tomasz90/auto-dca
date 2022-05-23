@@ -20,6 +20,8 @@
     "@uniswap/v3-core": "^1.0.1",
     "@uniswap/v3-periphery": "^1.4.1",
     "dotenv": "^16.0.1",
+    "ganache-core": "^2.13.2",
+    "truffle-contract-size": "^2.0.1",
     "truffle-plugin-verify": "^0.5.25"
   },
   "devDependencies": {
