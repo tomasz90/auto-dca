@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
@@ -9,7 +8,7 @@ import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 
 import "./AccountManager.sol";
 
-contract AutoDca is Ownable {
+contract AutoDca {
     uint256 public counter;
     AccountManager public immutable manager;
     ISwapRouter router;
