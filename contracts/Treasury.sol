@@ -29,7 +29,7 @@ contract Treasury {
         _ops.createTask(_autoDca, AutoDca.exec.selector, _autoDca, abi.encodeWithSelector(AutoDca.checker.selector));
     }
 
-    function deposit(address user) external payable {
+    function deposit(address user) external payable onlyManager {
         balances[user] += msg.value;
         payable(ops.taskTreasury()).transfer(msg.value);
     }
