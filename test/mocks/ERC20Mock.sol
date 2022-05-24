@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract IERC20Mock {
+contract ERC20Mock {
 
     uint256 _allowance;
     uint256 _balance;

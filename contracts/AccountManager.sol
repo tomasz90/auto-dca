@@ -7,13 +7,19 @@ import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
+import "./AutoDca.sol";
+import "./Treasury.sol";
+import "./IOps.sol";
+
 contract AccountManager {
     mapping(address => AccountParams) public accountsParams;
     address[] public accounts;
 
     address public immutable autoDca;
-
     IUniswapV3Factory public immutable uniswapFactory;
+    Treasury public immutable treasury;
+
+    uint256 public constant maxSwapCost = 10**6;
 
     struct AccountParams {
         uint256 interval;
@@ -30,9 +36,14 @@ contract AccountManager {
         _;
     }
 
-    constructor(IUniswapV3Factory _uniswapFactory, address _autoDca) {
-        uniswapFactory = _uniswapFactory;
+    constructor(
+        address _autoDca,
+        IUniswapV3Factory _uniswapFactory,
+        IOps _ops
+    ) {
         autoDca = _autoDca;
+        uniswapFactory = _uniswapFactory;
+        treasury = new Treasury(address(this), _autoDca, _ops);
     }
 
     function setUpAccount(
@@ -40,8 +51,8 @@ contract AccountManager {
         uint256 amount,
         IERC20 stableToken,
         IERC20 dcaIntoToken
-    ) external {
-        uint24 poolFee = findPool(stableToken, dcaIntoToken);
+    ) external payable {
+        uint24 poolFee = findPoolFee(stableToken, dcaIntoToken);
         AccountParams memory params = AccountParams(
             interval,
             block.timestamp + interval,
@@ -52,10 +63,19 @@ contract AccountManager {
             false
         );
         bool notExists = accountsParams[msg.sender].nextExec == 0;
-        accountsParams[msg.sender] = params;
         if (notExists) {
             accounts.push(msg.sender);
         }
+        accountsParams[msg.sender] = params;
+        deposit();
+    }
+
+    function deposit() public payable {
+        treasury.deposit{value: msg.value}(msg.sender);
+    }
+
+    function deductSwapBalance(address user, uint256 cost) external onlyAutoDca {
+        treasury.deductSwapBalance(user, cost);
     }
 
     function setInterval(uint256 interval) external {
@@ -120,31 +140,20 @@ contract AccountManager {
         for (uint256 i; i < accounts.length; i++) {
             AccountParams memory account = accountsParams[accounts[i]];
             bool execTime = isExecTime(accounts[i]);
+            bool transactable = isTransactable(accounts[i]);
             bool spendable = isSpendable(accounts[i], account.stableToken, account.amount);
-            if (execTime && spendable) {
+            if (execTime && transactable && spendable) {
                 user = accounts[i];
             }
         }
     }
 
-    function getSwapParams(address user)
-        external
-        view
-        returns (
-            uint24 poolFee,
-            IERC20 stableToken,
-            IERC20 dcaIntoToken,
-            uint256 amount
-        )
-    {
-        poolFee = accountsParams[user].poolFee;
-        stableToken = accountsParams[user].stableToken;
-        dcaIntoToken = accountsParams[user].dcaIntoToken;
-        amount = accountsParams[user].amount;
-    }
-
     function isExecTime(address user) public view returns (bool) {
         return accountsParams[user].nextExec < block.timestamp;
+    }
+
+    function isTransactable(address user) private view returns (bool) {
+        return treasury.balances(user) > maxSwapCost * tx.gasprice;
     }
 
     function isSpendable(
@@ -156,7 +165,7 @@ contract AccountManager {
         return stableToken.balanceOf(user) > amount && allowance > amount;
     }
 
-    function findPool(IERC20 stableToken, IERC20 dcaIntoToken) private view returns (uint24) {
+    function findPoolFee(IERC20 stableToken, IERC20 dcaIntoToken) private view returns (uint24) {
         uint24[3] memory fee = [uint24(100), uint24(500), uint24(3000)];
         for (uint256 i; i < fee.length; i++) {
             address poolAddress = uniswapFactory.getPool(address(stableToken), address(dcaIntoToken), fee[i]);
@@ -167,9 +176,7 @@ contract AccountManager {
 
         string memory token0 = Strings.toHexString(uint256(uint160(address(stableToken))), 20);
         string memory token1 = Strings.toHexString(uint256(uint160(address(dcaIntoToken))), 20);
-        string memory message = string(
-            abi.encodePacked("No pool with tokens: ", token0, ", ", token1)
-        );
+        string memory message = string(abi.encodePacked("No pool with tokens: ", token0, ", ", token1));
 
         revert(message);
     }

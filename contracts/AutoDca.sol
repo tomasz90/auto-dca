@@ -1,41 +1,40 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
+import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 
 import "./AccountManager.sol";
+import "./IOps.sol";
 
 contract AutoDca {
     uint256 public counter;
+
     AccountManager public immutable manager;
     ISwapRouter router;
-    address public immutable ops;
+    IOps public immutable ops;
 
     constructor(
-        IUniswapV3Factory _uniswapFactory,
         ISwapRouter _router,
-        address _ops
+        IUniswapV3Factory _uniswapFactory,
+        IOps _ops
     ) {
         counter = 0;
         router = _router;
         ops = _ops;
-        manager = new AccountManager(_uniswapFactory, address(this));
+        manager = new AccountManager(address(this), _uniswapFactory, _ops);
     }
 
     modifier onlyExecutor() {
-        if (msg.sender != ops) {
+        if (msg.sender != address(ops)) {
             string memory sender = Strings.toHexString(uint256(uint160(msg.sender)), 20);
             string memory message = string(abi.encodePacked("Sender is not an Executor: ", sender));
             revert(message);
         }
-        _;
-    }
-
-    modifier onlyInRightTime(address user) {
-        require(manager.isExecTime(user), "Require right time for calling");
         _;
     }
 
@@ -47,11 +46,18 @@ contract AutoDca {
         }
     }
 
-    function exec(address user) external onlyExecutor onlyInRightTime(user) {
+    function exec(address user) external onlyExecutor {
+        uint256 gas = gasleft();
+        (, , uint256 amount, uint24 poolFee, IERC20 stableToken, IERC20 dcaIntoToken, ) = manager.accountsParams(user);
+        require(manager.isExecTime(user), "Require right time for calling");
+
         counter++;
         manager.setNextExec(user);
-        (uint24 poolFee, IERC20 stableToken, IERC20 dcaIntoToken, uint256 amount) = manager.getSwapParams(user);
         swap(user, poolFee, stableToken, dcaIntoToken, amount);
+
+        gas -= gasleft();
+        uint256 approxCost = gas * tx.gasprice;
+        manager.deductSwapBalance(user, approxCost);
     }
 
     function swap(
