@@ -10,12 +10,13 @@ const {assertException, errTypes} = require("./exceptions");
 contract("AccountManager", (accounts) => {
     let accountManager;
     let uniswapV3Factory;
+    let ops;
 
     let nullAddress = "0x0000000000000000000000000000000000000000";
 
     beforeEach(async () => {
         let autoDcaAddress = "0x0000000000000000000000000000000000000001";
-        let poolAddress = "0x0000000000000000000000000000000000000003";
+        let poolAddress = "0x0000000000000000000000000000000000000002";
 
         uniswapV3Factory = await UniswapV3FactoryMock.new();
         ops = await OpsMock.new();
@@ -210,6 +211,20 @@ contract("AccountManager", (accounts) => {
 
         // then
         assert.equal(account, nullAddress);
+    });
+
+    it("should deposit funds to task tresury", async () => {
+        // given
+        let gwei = 1000000000;
+        let treasuryAddress = "0x0000000000000000000000000000000000000005";
+        ops.setTaskTreasury(treasuryAddress);
+
+        // when
+        await accountManager.deposit({value: gwei});
+
+        // then
+        let balance = await web3.eth.getBalance(treasuryAddress);
+        assert.equal(gwei, balance);
     });
 });
 

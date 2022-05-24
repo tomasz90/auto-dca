@@ -2,7 +2,11 @@
 pragma solidity ^0.8.0;
 contract OpsMock {
 
-    function taskTreasury() external returns (address) {}
+    address tt;
+
+    function taskTreasury() external returns (address) {
+        return tt;
+    }
 
     function createTask(
         address execAddress,
@@ -10,5 +14,9 @@ contract OpsMock {
         address resolverAddress,
         bytes calldata resolverData
     ) external returns (bytes32 task) {}
+
+    function setTaskTreasury(address _taskTreasury) external {
+        tt = _taskTreasury;
+    }
     
 }
