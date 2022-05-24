@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
 import "./AutoDca.sol";
-import "./Treasury.sol";
+import "./BalanceHolder.sol";
 import "./IOps.sol";
 
 contract AccountManager {
@@ -17,7 +17,7 @@ contract AccountManager {
 
     address public immutable autoDca;
     IUniswapV3Factory public immutable uniswapFactory;
-    Treasury public immutable treasury;
+    BalanceHolder public immutable balanceHolder;
 
     uint256 public constant maxSwapCost = 10**6;
 
@@ -26,8 +26,8 @@ contract AccountManager {
         uint256 nextExec;
         uint256 amount;
         uint24 poolFee;
-        IERC20 stableToken;
-        IERC20 dcaIntoToken;
+        IERC20 sellToken;
+        IERC20 buyToken;
         bool paused;
     }
 
@@ -43,27 +43,26 @@ contract AccountManager {
     ) {
         autoDca = _autoDca;
         uniswapFactory = _uniswapFactory;
-        treasury = new Treasury(address(this), _autoDca, _ops);
+        balanceHolder = new BalanceHolder(address(this), _autoDca, _ops);
     }
 
     function setUpAccount(
         uint256 interval,
         uint256 amount,
-        IERC20 stableToken,
-        IERC20 dcaIntoToken
+        IERC20 sellToken,
+        IERC20 buyToken
     ) external payable {
-        uint24 poolFee = findPoolFee(stableToken, dcaIntoToken);
+        uint24 poolFee = findPoolFee(sellToken, buyToken);
         AccountParams memory params = AccountParams(
             interval,
             block.timestamp + interval,
             amount,
             poolFee,
-            stableToken,
-            dcaIntoToken,
+            sellToken,
+            buyToken,
             false
         );
-        bool notExists = accountsParams[msg.sender].nextExec == 0;
-        if (notExists) {
+        if (!isExisting()) {
             accounts.push(msg.sender);
         }
         accountsParams[msg.sender] = params;
@@ -71,16 +70,16 @@ contract AccountManager {
     }
 
     function deposit() public payable {
-        treasury.deposit{value: msg.value}(msg.sender);
+        require(isExisting(), "Set up an account first");
+        balanceHolder.deposit{value: msg.value}(msg.sender);
     }
 
     function deductSwapBalance(address user, uint256 cost) external onlyAutoDca {
-        treasury.deductSwapBalance(user, cost);
+        balanceHolder.deductSwapBalance(user, cost);
     }
 
     function setInterval(uint256 interval) external {
-        bool exists = accountsParams[msg.sender].nextExec != 0;
-        if (exists) {
+        if (isExisting()) {
             accountsParams[msg.sender].interval = interval;
         } else {
             revert("Account does not exists yet");
@@ -88,27 +87,24 @@ contract AccountManager {
     }
 
     function setAmount(uint256 amount) external {
-        bool exists = accountsParams[msg.sender].nextExec != 0;
-        if (exists) {
+        if (isExisting()) {
             accountsParams[msg.sender].amount = amount;
         } else {
             revert("Account does not exists yet");
         }
     }
 
-    function setStableToken(IERC20 token) external {
-        bool exists = accountsParams[msg.sender].nextExec != 0;
-        if (exists) {
-            accountsParams[msg.sender].stableToken = token;
+    function setSellToken(IERC20 token) external {
+        if (isExisting()) {
+            accountsParams[msg.sender].sellToken = token;
         } else {
             revert("Account does not exists yet");
         }
     }
 
-    function setDcaIntoToken(IERC20 token) external {
-        bool exists = accountsParams[msg.sender].nextExec != 0;
-        if (exists) {
-            accountsParams[msg.sender].dcaIntoToken = token;
+    function setBuyToken(IERC20 token) external {
+        if (isExisting()) {
+            accountsParams[msg.sender].buyToken = token;
         } else {
             revert("Account does not exists yet");
         }
@@ -119,8 +115,7 @@ contract AccountManager {
     }
 
     function setPause() external {
-        bool exists = accountsParams[msg.sender].nextExec != 0;
-        if (exists) {
+        if (isExisting()) {
             accountsParams[msg.sender].paused = true;
         } else {
             revert("Account does not exists yet");
@@ -128,8 +123,7 @@ contract AccountManager {
     }
 
     function setUnpause() external {
-        bool exists = accountsParams[msg.sender].nextExec != 0;
-        if (exists) {
+        if (isExisting()) {
             accountsParams[msg.sender].paused = false;
         } else {
             revert("Account does not exists yet");
@@ -141,7 +135,7 @@ contract AccountManager {
             AccountParams memory account = accountsParams[accounts[i]];
             bool execTime = isExecTime(accounts[i]);
             bool transactable = isTransactable(accounts[i]);
-            bool spendable = isSpendable(accounts[i], account.stableToken, account.amount);
+            bool spendable = isSpendable(accounts[i], account.sellToken, account.amount);
             if (execTime && transactable && spendable) {
                 user = accounts[i];
             }
@@ -152,30 +146,34 @@ contract AccountManager {
         return accountsParams[user].nextExec < block.timestamp;
     }
 
+    function isExisting() private view returns (bool) {
+        return accountsParams[msg.sender].nextExec != 0;
+    }
+
     function isTransactable(address user) private view returns (bool) {
-        return treasury.balances(user) > maxSwapCost * tx.gasprice;
+        return balanceHolder.balances(user) > maxSwapCost * tx.gasprice;
     }
 
     function isSpendable(
         address user,
-        IERC20 stableToken,
+        IERC20 sellToken,
         uint256 amount
     ) private view returns (bool) {
-        uint256 allowance = stableToken.allowance(user, autoDca);
-        return stableToken.balanceOf(user) > amount && allowance > amount;
+        uint256 allowance = sellToken.allowance(user, autoDca);
+        return sellToken.balanceOf(user) > amount && allowance > amount;
     }
 
-    function findPoolFee(IERC20 stableToken, IERC20 dcaIntoToken) private view returns (uint24) {
+    function findPoolFee(IERC20 sellToken, IERC20 buyToken) private view returns (uint24) {
         uint24[3] memory fee = [uint24(100), uint24(500), uint24(3000)];
         for (uint256 i; i < fee.length; i++) {
-            address poolAddress = uniswapFactory.getPool(address(stableToken), address(dcaIntoToken), fee[i]);
+            address poolAddress = uniswapFactory.getPool(address(sellToken), address(buyToken), fee[i]);
             if (poolAddress != address(0)) {
                 return fee[i];
             }
         }
 
-        string memory token0 = Strings.toHexString(uint256(uint160(address(stableToken))), 20);
-        string memory token1 = Strings.toHexString(uint256(uint160(address(dcaIntoToken))), 20);
+        string memory token0 = Strings.toHexString(uint256(uint160(address(sellToken))), 20);
+        string memory token1 = Strings.toHexString(uint256(uint160(address(buyToken))), 20);
         string memory message = string(abi.encodePacked("No pool with tokens: ", token0, ", ", token1));
 
         revert(message);

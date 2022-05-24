@@ -1,18 +1,18 @@
-const Treasury = artifacts.require("Treasury");
+const BalanceHolder = artifacts.require("BalanceHolder");
 
 const OpsMock = artifacts.require("OpsMock");
 
 const {assertRevert, randomAddress} = require("./helpers");
 
-contract(Treasury, (accounts) => {
+contract(BalanceHolder, (accounts) => {
 
     let manager;
-    let treasury;
+    let balanceHolder;
 
     beforeEach(async () => {
         manager = accounts[1];
         let ops = await OpsMock.new();
-        treasury = await Treasury.new(manager, randomAddress(), ops.address);
+        balanceHolder = await BalanceHolder.new(manager, randomAddress(), ops.address);
     });
 
     it("should create user balance", async () => {
@@ -21,10 +21,10 @@ contract(Treasury, (accounts) => {
         let gwei = 1000000000;
 
         // when
-        await treasury.deposit(user, {value: gwei, from: manager});
+        await balanceHolder.deposit(user, {value: gwei, from: manager});
 
         // then
-        let balance = await treasury.balances.call(user);
+        let balance = await balanceHolder.balances.call(user);
         assert.equal(balance, gwei);
     })
 
@@ -32,13 +32,13 @@ contract(Treasury, (accounts) => {
         // given
         let user = accounts[0];
         let gwei = 1000000000;
-        await treasury.deposit(user, {value: gwei, from: manager});
+        await balanceHolder.deposit(user, {value: gwei, from: manager});
 
         // when
-        await treasury.deposit(user, {value: gwei, from: manager});
+        await balanceHolder.deposit(user, {value: gwei, from: manager});
 
         // then
-        let balance = await treasury.balances.call(user);
+        let balance = await balanceHolder.balances.call(user);
         assert.equal(balance, 2 * gwei);
     })
 
@@ -48,7 +48,7 @@ contract(Treasury, (accounts) => {
         let gwei = 1000000000;
 
         // when
-        let deduct = treasury.deductSwapBalance(notManager, gwei, {from: notManager});
+        let deduct = balanceHolder.deductSwapBalance(notManager, gwei, {from: notManager});
 
         // then
         assertRevert(deduct);

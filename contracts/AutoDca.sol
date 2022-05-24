@@ -48,12 +48,12 @@ contract AutoDca {
 
     function exec(address user) external onlyExecutor {
         uint256 gas = gasleft();
-        (, , uint256 amount, uint24 poolFee, IERC20 stableToken, IERC20 dcaIntoToken, ) = manager.accountsParams(user);
+        (, , uint256 amount, uint24 poolFee, IERC20 sellToken, IERC20 buyToken, ) = manager.accountsParams(user);
         require(manager.isExecTime(user), "Require right time for calling");
 
         counter++;
         manager.setNextExec(user);
-        swap(user, poolFee, stableToken, dcaIntoToken, amount);
+        swap(user, poolFee, sellToken, buyToken, amount);
 
         gas -= gasleft();
         uint256 approxCost = gas * tx.gasprice;
@@ -63,20 +63,20 @@ contract AutoDca {
     function swap(
         address user,
         uint24 poolFee,
-        IERC20 stableToken,
-        IERC20 dcaIntoToken,
+        IERC20 sellToken,
+        IERC20 buyToken,
         uint256 amount
     ) private {
-        stableToken.transferFrom(user, address(this), amount);
-        stableToken.approve(address(router), amount);
+        sellToken.transferFrom(user, address(this), amount);
+        sellToken.approve(address(router), amount);
 
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams(
-            address(stableToken),
-            address(dcaIntoToken),
+            address(sellToken),
+            address(buyToken),
             poolFee,
             user,
             block.timestamp + 120,
-            100,
+            amount,
             0,
             0
         );

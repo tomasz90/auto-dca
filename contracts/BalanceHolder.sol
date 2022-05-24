@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "./AutoDca.sol";
 import "./IOps.sol";
 
-contract Treasury {
+contract BalanceHolder {
     address public immutable manager;
     IOps public immutable ops;
 
