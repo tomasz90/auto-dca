@@ -3,11 +3,8 @@ const AccountManager = artifacts.require("AccountManager");
 const UniswapV3FactoryMock = artifacts.require("UniswapV3FactoryMock");
 const OpsMock = artifacts.require("OpsMock");
 const ERC20Mock = artifacts.require("ERC20Mock");
-const Mock = artifacts.require("Mock");
 
-const ethers = require("ethers");
-
-const {assertException, errTypes} = require("./helpers");
+const {assertRevert, sleep, randomAddress} = require("./helpers");
 
 contract("AccountManager", (accounts) => {
     let accountManager;
@@ -57,7 +54,7 @@ contract("AccountManager", (accounts) => {
 
         // expect
         let setUp = accountManager.setUpAccount(interval, amount, token0.address, token1.address, {from: accounts[1]});
-        await assertException(setUp, errTypes.revert);
+        await assertRevert(setUp);
     });
 
     it("should pause and unpause account", async () => {
@@ -94,7 +91,7 @@ contract("AccountManager", (accounts) => {
     it("should return true for exec time", async () => {
         // given, wait for exect time
         let account = await accountManager.accounts(0);
-        await sleep();
+        await sleep(2.5);
 
         // when
         let isTime = await accountManager.isExecTime(account);
@@ -113,7 +110,7 @@ contract("AccountManager", (accounts) => {
 
     it("should return user need exec, if: " + conditions, async () => {
         // given
-        await sleep();
+        await sleep(2.5);
         let gwei = 1000000000;
         await accountManager.deposit({value: gwei});
         await token0.setBalance(1000);
@@ -158,7 +155,7 @@ contract("AccountManager", (accounts) => {
 
     it("should return null address, if: " + conditions, async () => {
         // given
-        await sleep();
+        await sleep(2.5);
         await token0.setBalance(1000);
         await token0.setAllowance(1000);
 
@@ -179,7 +176,7 @@ contract("AccountManager", (accounts) => {
 
     it("should return null address, if: " + conditions, async () => {
         // given
-        await sleep();
+        await sleep(2.5);
         let gwei = 1000000000;
         await accountManager.deposit({value: gwei});
         await token0.setBalance(0);
@@ -202,7 +199,7 @@ contract("AccountManager", (accounts) => {
 
     it("should return null address, if: " + conditions, async () => {
         // given
-        await sleep();
+        await sleep(2.5);
         let gwei = 1000000000;
         await accountManager.deposit({value: gwei});
         await token0.setBalance(1000);
@@ -229,14 +226,3 @@ contract("AccountManager", (accounts) => {
         assert.equal(gwei, balance);
     });
 });
-
-function randomAddress() {
-    return ethers.Wallet.createRandom().address;
-}
-
-async function sleep() {
-    await new Promise((resolve) => setTimeout(resolve, 2500));
-    // here should be any transaction that force block to be mined and change block.timestamp
-    let mock = await Mock.new();
-    await mock.mockTransaction();
-}

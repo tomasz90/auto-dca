@@ -5,7 +5,6 @@ import "./AutoDca.sol";
 import "./IOps.sol";
 
 contract Treasury {
-    
     address public immutable manager;
     IOps public immutable ops;
 
