@@ -43,9 +43,9 @@ module.exports = {
             version: "0.8.6",
         },
     },
-    plugins: ["truffle-plugin-verify", "truffle-ganache-test"],
+    plugins: ["truffle-plugin-verify", "truffle-ganache-test", "truffle-plugin-stdjsonin"],
     api_keys: {
         polygonscan: process.env.POLYGON_SCAN_API_KEY,
         etherscan: process.env.ETHERSCAN_API_KEY,
-    },
+    }
 };
