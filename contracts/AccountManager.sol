@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
 import "./AutoDca.sol";
+import "./Treasury.sol";
 import "./IOps.sol";
 
 contract AccountManager {
@@ -15,13 +16,15 @@ contract AccountManager {
     address[] public accounts;
 
     address public immutable autoDca;
-    IUniswapV3Factory public immutable uniswapFactory;
     IOps public immutable ops;
+    IUniswapV3Factory public immutable uniswapFactory;
+    Treasury public immutable treasury;
+
+    uint256 public constant maxSwapCost = 10**6;
 
     struct AccountParams {
         uint256 interval;
         uint256 nextExec;
-        uint256 swapBalance;
         uint256 amount;
         uint24 poolFee;
         IERC20 stableToken;
@@ -42,11 +45,7 @@ contract AccountManager {
         autoDca = _autoDca;
         ops = _ops;
         uniswapFactory = _uniswapFactory;
-        setUpTask(_autoDca, _ops);
-    }
-
-    function setUpTask(address _autoDca, IOps _ops) private {
-        _ops.createTask(_autoDca, AutoDca.exec.selector, _autoDca, abi.encodeWithSelector(AutoDca.checker.selector));
+        treasury = new Treasury(_autoDca, _ops);
     }
 
     function setUpAccount(
@@ -59,7 +58,6 @@ contract AccountManager {
         AccountParams memory params = AccountParams(
             interval,
             block.timestamp + interval,
-            0,
             amount,
             poolFee,
             stableToken,
@@ -71,16 +69,11 @@ contract AccountManager {
             accounts.push(msg.sender);
         }
         accountsParams[msg.sender] = params;
-        deposit();
+        treasury.deposit{value: msg.value}(msg.sender);
     }
 
-    function deposit() public payable {
-        accountsParams[msg.sender].swapBalance += msg.value;
-        payable(ops.taskTreasury()).transfer(msg.value);
-    }
-
-    function deductSwapBalance(address user, uint256 cost) external onlyAutoDca {
-        accountsParams[user].swapBalance -= cost;
+    function deductSwapBalance(address user, uint256 cost) external {
+        treasury.deductSwapBalance(user, cost);
     }
 
     function setInterval(uint256 interval) external {
@@ -145,33 +138,20 @@ contract AccountManager {
         for (uint256 i; i < accounts.length; i++) {
             AccountParams memory account = accountsParams[accounts[i]];
             bool execTime = isExecTime(accounts[i]);
+            bool transactable = isTransactable(user);
             bool spendable = isSpendable(accounts[i], account.stableToken, account.amount);
-            if (execTime && spendable) {
+            if (execTime && transactable && spendable) {
                 user = accounts[i];
             }
         }
     }
 
-    function getSwapParams(address user)
-        external
-        view
-        returns (
-            uint256 swapBalance,
-            uint24 poolFee,
-            IERC20 stableToken,
-            IERC20 dcaIntoToken,
-            uint256 amount
-        )
-    {
-        swapBalance = accountsParams[user].swapBalance;
-        poolFee = accountsParams[user].poolFee;
-        stableToken = accountsParams[user].stableToken;
-        dcaIntoToken = accountsParams[user].dcaIntoToken;
-        amount = accountsParams[user].amount;
-    }
-
     function isExecTime(address user) public view returns (bool) {
         return accountsParams[user].nextExec < block.timestamp;
+    }
+
+    function isTransactable(address user) private view returns (bool) {
+        return treasury.balances(user) > maxSwapCost;
     }
 
     function isSpendable(

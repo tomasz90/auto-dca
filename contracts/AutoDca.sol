@@ -18,8 +18,6 @@ contract AutoDca {
     ISwapRouter router;
     IOps public immutable ops;
 
-    uint256 public constant maxSwapCost = 10**6;
-
     constructor(
         IUniswapV3Factory _uniswapFactory,
         ISwapRouter _router,
@@ -50,10 +48,8 @@ contract AutoDca {
 
     function exec(address user) external onlyExecutor {
         uint256 gas = gasleft();
-        (uint256 swapBalance, uint24 poolFee, IERC20 stableToken, IERC20 dcaIntoToken, uint256 amount) = manager
-            .getSwapParams(user);
+        (, , uint256 amount, uint24 poolFee, IERC20 stableToken, IERC20 dcaIntoToken, ) = manager.accountsParams(user);
         require(manager.isExecTime(user), "Require right time for calling");
-        require(swapBalance > maxSwapCost);
 
         counter++;
         manager.setNextExec(user);
