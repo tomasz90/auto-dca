@@ -1,11 +1,5 @@
 module.exports.errTypes = {
     revert: "revert",
-    outOfGas: "out of gas",
-    invalidJump: "invalid JUMP",
-    invalidOpcode: "invalid opcode",
-    stackOverflow: "stack overflow",
-    stackUnderflow: "stack underflow",
-    staticStateChange: "static state change",
 };
 
 module.exports.assertException = async (promise, errType) => {

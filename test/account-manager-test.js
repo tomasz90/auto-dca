@@ -5,7 +5,9 @@ const OpsMock = artifacts.require("OpsMock");
 const ERC20Mock = artifacts.require("ERC20Mock");
 const Mock = artifacts.require("Mock");
 
-const {assertException, errTypes} = require("./exceptions");
+const ethers = require("ethers");
+
+const {assertException, errTypes} = require("./helpers");
 
 contract("AccountManager", (accounts) => {
     let accountManager;
@@ -15,8 +17,8 @@ contract("AccountManager", (accounts) => {
     let nullAddress = "0x0000000000000000000000000000000000000000";
 
     beforeEach(async () => {
-        let autoDcaAddress = "0x0000000000000000000000000000000000000001";
-        let poolAddress = "0x0000000000000000000000000000000000000002";
+        let autoDcaAddress = randomAddress();
+        let poolAddress = randomAddress();
 
         uniswapV3Factory = await UniswapV3FactoryMock.new();
         ops = await OpsMock.new();
@@ -216,7 +218,7 @@ contract("AccountManager", (accounts) => {
     it("should deposit funds to task tresury", async () => {
         // given
         let gwei = 1000000000;
-        let treasuryAddress = "0x0000000000000000000000000000000000000005";
+        let treasuryAddress = randomAddress();
         ops.setTaskTreasury(treasuryAddress);
 
         // when
@@ -227,6 +229,10 @@ contract("AccountManager", (accounts) => {
         assert.equal(gwei, balance);
     });
 });
+
+function randomAddress() {
+    return ethers.Wallet.createRandom().address;
+}
 
 async function sleep() {
     await new Promise((resolve) => setTimeout(resolve, 2500));
