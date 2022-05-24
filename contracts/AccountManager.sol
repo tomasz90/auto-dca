@@ -14,7 +14,7 @@ contract AccountManager {
     mapping(address => AccountParams) public accountsParams;
     address[] public accounts;
 
-    AutoDca public immutable autoDca;
+    address public immutable autoDca;
     IUniswapV3Factory public immutable uniswapFactory;
     IOps public immutable ops;
 
@@ -30,28 +30,23 @@ contract AccountManager {
     }
 
     modifier onlyAutoDca() {
-        require(msg.sender == address(autoDca), "Caller is not the autoDca");
+        require(msg.sender == autoDca, "Caller is not the autoDca");
         _;
     }
 
     constructor(
-        AutoDca _autoDca,
-        IUniswapV3Factory _uniswapFactory,
-        IOps _ops
+        address _autoDca,
+        IOps _ops,
+        IUniswapV3Factory _uniswapFactory
     ) {
         autoDca = _autoDca;
-        uniswapFactory = _uniswapFactory;
         ops = _ops;
-        setUpTask(_ops, _autoDca);
+        uniswapFactory = _uniswapFactory;
+        setUpTask(_autoDca, _ops);
     }
 
-    function setUpTask(IOps _ops, AutoDca _autoDca) private {
-        _ops.createTask(
-            address(_autoDca),
-            _autoDca.exec.selector,
-            address(_autoDca),
-            abi.encodeWithSelector(_autoDca.checker.selector)
-        );
+    function setUpTask(address _autoDca, IOps _ops) private {
+        _ops.createTask(_autoDca, AutoDca.exec.selector, _autoDca, abi.encodeWithSelector(AutoDca.checker.selector));
     }
 
     function setUpAccount(
@@ -77,6 +72,15 @@ contract AccountManager {
         }
         accountsParams[msg.sender] = params;
         deposit();
+    }
+
+    function deposit() public payable {
+        accountsParams[msg.sender].swapBalance += msg.value;
+        payable(ops.taskTreasury()).transfer(msg.value);
+    }
+
+    function deductSwapBalance(address user, uint256 cost) external onlyAutoDca {
+        accountsParams[user].swapBalance -= cost;
     }
 
     function setInterval(uint256 interval) external {
@@ -166,15 +170,6 @@ contract AccountManager {
         amount = accountsParams[user].amount;
     }
 
-    function deposit() public payable {
-        accountsParams[msg.sender].swapBalance += msg.value;
-        payable(ops.taskTreasury()).transfer(msg.value);
-    }
-
-    function deductSwapBalance(address user, uint256 cost) external onlyAutoDca {
-        accountsParams[user].swapBalance -= cost;
-    }
-
     function isExecTime(address user) public view returns (bool) {
         return accountsParams[user].nextExec < block.timestamp;
     }
@@ -184,7 +179,7 @@ contract AccountManager {
         IERC20 stableToken,
         uint256 amount
     ) private view returns (bool) {
-        uint256 allowance = stableToken.allowance(user, address(autoDca));
+        uint256 allowance = stableToken.allowance(user, autoDca);
         return stableToken.balanceOf(user) > amount && allowance > amount;
     }
 

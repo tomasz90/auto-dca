@@ -28,7 +28,7 @@ contract AutoDca {
         counter = 0;
         router = _router;
         ops = _ops;
-        manager = new AccountManager(this, _uniswapFactory, _ops);
+        manager = new AccountManager(address(this), _ops, _uniswapFactory);
     }
 
     modifier onlyExecutor() {
