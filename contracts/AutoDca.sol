@@ -19,14 +19,14 @@ contract AutoDca {
     IOps public immutable ops;
 
     constructor(
-        IUniswapV3Factory _uniswapFactory,
         ISwapRouter _router,
+        IUniswapV3Factory _uniswapFactory,
         IOps _ops
     ) {
         counter = 0;
         router = _router;
         ops = _ops;
-        manager = new AccountManager(address(this), _ops, _uniswapFactory);
+        manager = new AccountManager(address(this), _uniswapFactory, _ops);
     }
 
     modifier onlyExecutor() {

@@ -16,7 +16,6 @@ contract AccountManager {
     address[] public accounts;
 
     address public immutable autoDca;
-    IOps public immutable ops;
     IUniswapV3Factory public immutable uniswapFactory;
     Treasury public immutable treasury;
 
@@ -39,11 +38,10 @@ contract AccountManager {
 
     constructor(
         address _autoDca,
-        IOps _ops,
-        IUniswapV3Factory _uniswapFactory
+        IUniswapV3Factory _uniswapFactory,
+        IOps _ops
     ) {
         autoDca = _autoDca;
-        ops = _ops;
         uniswapFactory = _uniswapFactory;
         treasury = new Treasury(address(this), _autoDca, _ops);
     }
@@ -142,7 +140,7 @@ contract AccountManager {
         for (uint256 i; i < accounts.length; i++) {
             AccountParams memory account = accountsParams[accounts[i]];
             bool execTime = isExecTime(accounts[i]);
-            bool transactable = isTransactable(user);
+            bool transactable = isTransactable(accounts[i]);
             bool spendable = isSpendable(accounts[i], account.stableToken, account.amount);
             if (execTime && transactable && spendable) {
                 user = accounts[i];
@@ -155,7 +153,7 @@ contract AccountManager {
     }
 
     function isTransactable(address user) private view returns (bool) {
-        return treasury.balances(user) > maxSwapCost;
+        return treasury.balances(user) > maxSwapCost * tx.gasprice;
     }
 
     function isSpendable(

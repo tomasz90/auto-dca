@@ -1,7 +1,8 @@
 const AccountManager = artifacts.require("AccountManager");
 
-const IUniswapV3FactoryMock = artifacts.require("IUniswapV3FactoryMock");
-const IERC20Mock = artifacts.require("IERC20Mock");
+const UniswapV3FactoryMock = artifacts.require("UniswapV3FactoryMock");
+const OpsMock = artifacts.require("OpsMock");
+const ERC20Mock = artifacts.require("ERC20Mock");
 const Mock = artifacts.require("Mock");
 
 const {assertException, errTypes} = require("./exceptions");
@@ -11,17 +12,19 @@ contract("AccountManager", (accounts) => {
     let uniswapV3Factory;
 
     let nullAddress = "0x0000000000000000000000000000000000000000";
-    let autoDcaAddress = "0x0000000000000000000000000000000000000001";
-    let poolAddress = "0x0000000000000000000000000000000000000002";
 
     beforeEach(async () => {
-        uniswapV3Factory = await IUniswapV3FactoryMock.new();
-        accountManager = await AccountManager.new(uniswapV3Factory.address, autoDcaAddress);
-        token0 = await IERC20Mock.new();
-        token1 = await IERC20Mock.new();
+        let autoDcaAddress = "0x0000000000000000000000000000000000000001";
+        let poolAddress = "0x0000000000000000000000000000000000000003";
+
+        uniswapV3Factory = await UniswapV3FactoryMock.new();
+        ops = await OpsMock.new();
+        accountManager = await AccountManager.new(autoDcaAddress, uniswapV3Factory.address, ops.address);
+        token0 = await ERC20Mock.new();
+        token1 = await ERC20Mock.new();
 
         // given
-        let interval = 1;
+        let interval = 2;
         let amount = 100;
         await uniswapV3Factory.setPool(poolAddress);
         await accountManager.setUpAccount(interval, amount, token0.address, token1.address);
@@ -97,9 +100,19 @@ contract("AccountManager", (accounts) => {
         assert.isTrue(isTime);
     });
 
-    it("should return user need exec, if + balance, + allowance and passed exec time", async () => {
+    // prettier-ignore
+    let conditions = [
+        " + exec time", 
+        " + tx funds", 
+        " + balance", 
+        " + allowance"
+    ];
+
+    it("should return user need exec, if: " + conditions, async () => {
         // given
         await sleep();
+        let gwei = 1000000000;
+        await accountManager.deposit({value: gwei});
         await token0.setBalance(1000);
         await token0.setAllowance(1000);
 
@@ -110,8 +123,18 @@ contract("AccountManager", (accounts) => {
         assert.equal(account, accounts[0]);
     });
 
-    it("should return null address, if + balance, + allowance and NOT passed exec time", async () => {
+    // prettier-ignore
+    conditions = [
+        " - exec time", 
+        " + tx funds", 
+        " + balance", 
+        " + allowance"
+    ];
+
+    it("should return null address, if: " + conditions, async () => {
         // given
+        let gwei = 1000000000;
+        await accountManager.deposit({value: gwei});
         await token0.setBalance(1000);
         await token0.setAllowance(1000);
 
@@ -122,9 +145,40 @@ contract("AccountManager", (accounts) => {
         assert.equal(account, nullAddress);
     });
 
-    it("should return null address, if 0 balance, + allowance and passed exec time", async () => {
+    // prettier-ignore
+    conditions = [
+        " + exec time", 
+        " - tx funds", 
+        " + balance", 
+        " + allowance"
+    ];
+
+    it("should return null address, if: " + conditions, async () => {
         // given
         await sleep();
+        await token0.setBalance(1000);
+        await token0.setAllowance(1000);
+
+        // when
+        let account = await accountManager.getUserNeedExec();
+
+        // then
+        assert.equal(account, nullAddress);
+    });
+
+    // prettier-ignore
+    conditions = [
+        " + exec time", 
+        " + tx funds", 
+        " - balance", 
+        " + allowance"
+    ];
+
+    it("should return null address, if: " + conditions, async () => {
+        // given
+        await sleep();
+        let gwei = 1000000000;
+        await accountManager.deposit({value: gwei});
         await token0.setBalance(0);
         await token0.setAllowance(1000);
 
@@ -135,23 +189,20 @@ contract("AccountManager", (accounts) => {
         assert.equal(account, nullAddress);
     });
 
-    it("should return null address, if + balance, 0 allowance and passed exec time", async () => {
+    // prettier-ignore
+    conditions = [
+        " + exec time", 
+        " + tx funds", 
+        " + balance", 
+        " - allowance"
+    ];
+
+    it("should return null address, if: " + conditions, async () => {
         // given
         await sleep();
+        let gwei = 1000000000;
+        await accountManager.deposit({value: gwei});
         await token0.setBalance(1000);
-        await token0.setAllowance(0);
-
-        // when
-        let account = await accountManager.getUserNeedExec();
-
-        // then
-        assert.equal(account, nullAddress);
-    });
-
-    it("should return null address, if 0 balance, 0 allowance and passed exec time", async () => {
-        // given
-        await sleep();
-        await token0.setBalance(0);
         await token0.setAllowance(0);
 
         // when
@@ -163,7 +214,7 @@ contract("AccountManager", (accounts) => {
 });
 
 async function sleep() {
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    await new Promise((resolve) => setTimeout(resolve, 2500));
     // here should be any transaction that force block to be mined and change block.timestamp
     let mock = await Mock.new();
     await mock.mockTransaction();

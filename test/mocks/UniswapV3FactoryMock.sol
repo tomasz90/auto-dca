@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 
-contract IUniswapV3FactoryMock {
+contract UniswapV3FactoryMock {
     
     address pool;
 
