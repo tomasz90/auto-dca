@@ -1,34 +1,38 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
+import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 
 import "./AccountManager.sol";
+import "./IOps.sol";
 
 contract AutoDca {
     uint256 public counter;
+
     AccountManager public immutable manager;
     ISwapRouter router;
-    address public immutable ops;
+    IOps public immutable ops;
 
     uint256 public constant maxSwapCost = 10**6;
 
     constructor(
         IUniswapV3Factory _uniswapFactory,
         ISwapRouter _router,
-        address _ops
+        IOps _ops
     ) {
         counter = 0;
         router = _router;
         ops = _ops;
-        manager = new AccountManager(_uniswapFactory, address(this));
+        manager = new AccountManager(this, _uniswapFactory, _ops);
     }
 
     modifier onlyExecutor() {
-        if (msg.sender != ops) {
+        if (msg.sender != address(ops)) {
             string memory sender = Strings.toHexString(uint256(uint160(msg.sender)), 20);
             string memory message = string(abi.encodePacked("Sender is not an Executor: ", sender));
             revert(message);
@@ -46,14 +50,15 @@ contract AutoDca {
 
     function exec(address user) external onlyExecutor {
         uint256 gas = gasleft();
-        (uint256 swapBalance, uint24 poolFee, IERC20 stableToken, IERC20 dcaIntoToken, uint256 amount) = manager.getSwapParams(user);
+        (uint256 swapBalance, uint24 poolFee, IERC20 stableToken, IERC20 dcaIntoToken, uint256 amount) = manager
+            .getSwapParams(user);
         require(manager.isExecTime(user), "Require right time for calling");
         require(swapBalance > maxSwapCost);
 
         counter++;
         manager.setNextExec(user);
         swap(user, poolFee, stableToken, dcaIntoToken, amount);
-        
+
         gas -= gasleft();
         uint256 approxCost = gas * tx.gasprice;
         manager.deductSwapBalance(user, approxCost);

@@ -7,13 +7,16 @@ import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
+import "./AutoDca.sol";
+import "./IOps.sol";
+
 contract AccountManager {
     mapping(address => AccountParams) public accountsParams;
     address[] public accounts;
 
-    address public immutable autoDca;
-
+    AutoDca public immutable autoDca;
     IUniswapV3Factory public immutable uniswapFactory;
+    IOps public immutable ops;
 
     struct AccountParams {
         uint256 interval;
@@ -27,13 +30,28 @@ contract AccountManager {
     }
 
     modifier onlyAutoDca() {
-        require(msg.sender == autoDca, "Caller is not the autoDca");
+        require(msg.sender == address(autoDca), "Caller is not the autoDca");
         _;
     }
 
-    constructor(IUniswapV3Factory _uniswapFactory, address _autoDca) {
-        uniswapFactory = _uniswapFactory;
+    constructor(
+        AutoDca _autoDca,
+        IUniswapV3Factory _uniswapFactory,
+        IOps _ops
+    ) {
         autoDca = _autoDca;
+        uniswapFactory = _uniswapFactory;
+        ops = _ops;
+        setUpTask(_ops, _autoDca);
+    }
+
+    function setUpTask(IOps _ops, AutoDca _autoDca) private {
+        _ops.createTask(
+            address(_autoDca),
+            _autoDca.exec.selector,
+            address(_autoDca),
+            abi.encodeWithSelector(_autoDca.checker.selector)
+        );
     }
 
     function setUpAccount(
@@ -42,12 +60,11 @@ contract AccountManager {
         IERC20 stableToken,
         IERC20 dcaIntoToken
     ) external payable {
-        uint24 poolFee = findPool(stableToken, dcaIntoToken);
-        uint256 deposit = msg.value;
+        uint24 poolFee = findPoolFee(stableToken, dcaIntoToken);
         AccountParams memory params = AccountParams(
             interval,
             block.timestamp + interval,
-            deposit,
+            0,
             amount,
             poolFee,
             stableToken,
@@ -55,10 +72,11 @@ contract AccountManager {
             false
         );
         bool notExists = accountsParams[msg.sender].nextExec == 0;
-        accountsParams[msg.sender] = params;
         if (notExists) {
             accounts.push(msg.sender);
         }
+        accountsParams[msg.sender] = params;
+        deposit();
     }
 
     function setInterval(uint256 interval) external {
@@ -130,7 +148,7 @@ contract AccountManager {
         }
     }
 
-        function getSwapParams(address user)
+    function getSwapParams(address user)
         external
         view
         returns (
@@ -148,8 +166,9 @@ contract AccountManager {
         amount = accountsParams[user].amount;
     }
 
-    function deposit() external payable {
+    function deposit() public payable {
         accountsParams[msg.sender].swapBalance += msg.value;
+        payable(ops.taskTreasury()).transfer(msg.value);
     }
 
     function deductSwapBalance(address user, uint256 cost) external onlyAutoDca {
@@ -165,11 +184,11 @@ contract AccountManager {
         IERC20 stableToken,
         uint256 amount
     ) private view returns (bool) {
-        uint256 allowance = stableToken.allowance(user, autoDca);
+        uint256 allowance = stableToken.allowance(user, address(autoDca));
         return stableToken.balanceOf(user) > amount && allowance > amount;
     }
 
-    function findPool(IERC20 stableToken, IERC20 dcaIntoToken) private view returns (uint24) {
+    function findPoolFee(IERC20 stableToken, IERC20 dcaIntoToken) private view returns (uint24) {
         uint24[3] memory fee = [uint24(100), uint24(500), uint24(3000)];
         for (uint256 i; i < fee.length; i++) {
             address poolAddress = uniswapFactory.getPool(address(stableToken), address(dcaIntoToken), fee[i]);
