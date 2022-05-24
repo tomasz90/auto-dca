@@ -5,18 +5,22 @@ import "./AutoDca.sol";
 import "./IOps.sol";
 
 contract Treasury {
-    address public immutable autoDca;
+    address public immutable manager;
     IOps public immutable ops;
 
     mapping(address => uint256) public balances;
 
-    modifier onlyAutoDca() {
-        require(msg.sender == autoDca, "Caller is not the autoDca");
+    modifier onlyManager() {
+        require(msg.sender == manager, "Caller is not the autoDca");
         _;
     }
 
-    constructor(address _autoDca, IOps _ops) {
-        autoDca = _autoDca;
+    constructor(
+        address _manager,
+        address _autoDca,
+        IOps _ops
+    ) {
+        manager = _manager;
         ops = _ops;
         setUpTask(_autoDca, _ops);
     }
@@ -30,7 +34,7 @@ contract Treasury {
         payable(ops.taskTreasury()).transfer(msg.value);
     }
 
-    function deductSwapBalance(address user, uint256 cost) external onlyAutoDca {
+    function deductSwapBalance(address user, uint256 cost) external onlyManager {
         balances[user] -= cost;
     }
 }

@@ -45,7 +45,7 @@ contract AccountManager {
         autoDca = _autoDca;
         ops = _ops;
         uniswapFactory = _uniswapFactory;
-        treasury = new Treasury(_autoDca, _ops);
+        treasury = new Treasury(address(this), _autoDca, _ops);
     }
 
     function setUpAccount(
@@ -69,10 +69,14 @@ contract AccountManager {
             accounts.push(msg.sender);
         }
         accountsParams[msg.sender] = params;
+        deposit();
+    }
+
+    function deposit() public payable {
         treasury.deposit{value: msg.value}(msg.sender);
     }
 
-    function deductSwapBalance(address user, uint256 cost) external {
+    function deductSwapBalance(address user, uint256 cost) external onlyAutoDca {
         treasury.deductSwapBalance(user, cost);
     }
 
