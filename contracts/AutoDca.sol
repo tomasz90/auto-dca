@@ -14,6 +14,8 @@ contract AutoDca {
     ISwapRouter router;
     address public immutable ops;
 
+    uint256 public constant maxSwapCost = 10**6;
+
     constructor(
         IUniswapV3Factory _uniswapFactory,
         ISwapRouter _router,
@@ -34,11 +36,6 @@ contract AutoDca {
         _;
     }
 
-    modifier onlyInRightTime(address user) {
-        require(manager.isExecTime(user), "Require right time for calling");
-        _;
-    }
-
     function checker() external view returns (bool canExec, bytes memory execPayload) {
         address user = manager.getUserNeedExec();
         if (user != address(0)) {
@@ -47,11 +44,19 @@ contract AutoDca {
         }
     }
 
-    function exec(address user) external onlyExecutor onlyInRightTime(user) {
+    function exec(address user) external onlyExecutor {
+        uint256 gas = gasleft();
+        (uint256 swapBalance, uint24 poolFee, IERC20 stableToken, IERC20 dcaIntoToken, uint256 amount) = manager.getSwapParams(user);
+        require(manager.isExecTime(user), "Require right time for calling");
+        require(swapBalance > maxSwapCost);
+
         counter++;
         manager.setNextExec(user);
-        (uint24 poolFee, IERC20 stableToken, IERC20 dcaIntoToken, uint256 amount) = manager.getSwapParams(user);
         swap(user, poolFee, stableToken, dcaIntoToken, amount);
+        
+        gas -= gasleft();
+        uint256 approxCost = gas * tx.gasprice;
+        manager.deductSwapBalance(user, approxCost);
     }
 
     function swap(

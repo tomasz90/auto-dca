@@ -18,6 +18,7 @@ contract AccountManager {
     struct AccountParams {
         uint256 interval;
         uint256 nextExec;
+        uint256 swapBalance;
         uint256 amount;
         uint24 poolFee;
         IERC20 stableToken;
@@ -40,11 +41,13 @@ contract AccountManager {
         uint256 amount,
         IERC20 stableToken,
         IERC20 dcaIntoToken
-    ) external {
+    ) external payable {
         uint24 poolFee = findPool(stableToken, dcaIntoToken);
+        uint256 deposit = msg.value;
         AccountParams memory params = AccountParams(
             interval,
             block.timestamp + interval,
+            deposit,
             amount,
             poolFee,
             stableToken,
@@ -127,20 +130,30 @@ contract AccountManager {
         }
     }
 
-    function getSwapParams(address user)
+        function getSwapParams(address user)
         external
         view
         returns (
+            uint256 swapBalance,
             uint24 poolFee,
             IERC20 stableToken,
             IERC20 dcaIntoToken,
             uint256 amount
         )
     {
+        swapBalance = accountsParams[user].swapBalance;
         poolFee = accountsParams[user].poolFee;
         stableToken = accountsParams[user].stableToken;
         dcaIntoToken = accountsParams[user].dcaIntoToken;
         amount = accountsParams[user].amount;
+    }
+
+    function deposit() external payable {
+        accountsParams[msg.sender].swapBalance += msg.value;
+    }
+
+    function deductSwapBalance(address user, uint256 cost) external onlyAutoDca {
+        accountsParams[user].swapBalance -= cost;
     }
 
     function isExecTime(address user) public view returns (bool) {
@@ -167,9 +180,7 @@ contract AccountManager {
 
         string memory token0 = Strings.toHexString(uint256(uint160(address(stableToken))), 20);
         string memory token1 = Strings.toHexString(uint256(uint160(address(dcaIntoToken))), 20);
-        string memory message = string(
-            abi.encodePacked("No pool with tokens: ", token0, ", ", token1)
-        );
+        string memory message = string(abi.encodePacked("No pool with tokens: ", token0, ", ", token1));
 
         revert(message);
     }
