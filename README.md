@@ -1,4 +1,4 @@
-# Auto Dollar Cost Avaraging
+# Auto Dollar Cost Averaging
 
 DCA - this is one of the simplest investment strategy in which an investor divides up the total amount to be invested across periodic purchases of a target asset in an effort to reduce the impact of volatility on the overall purchase. The term was coined by Benjamin Graham.
 
