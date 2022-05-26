@@ -53,6 +53,7 @@ contract AutoDca {
 
         counter++;
         manager.setNextExec(user);
+        manager.getToken(user);
         swap(user, poolFee, sellToken, buyToken, amount);
 
         gas -= gasleft();
@@ -67,7 +68,6 @@ contract AutoDca {
         IERC20 buyToken,
         uint256 amount
     ) private {
-        sellToken.transferFrom(user, address(this), amount);
         sellToken.approve(address(router), amount);
 
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams(
