@@ -7,6 +7,7 @@ import "./ITaskTreasury.sol";
 
 contract BalanceHolder {
     address public immutable manager;
+    address public immutable autoDca;
     address constant ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     IOps public immutable ops;
 
@@ -23,6 +24,7 @@ contract BalanceHolder {
         IOps _ops
     ) {
         manager = _manager;
+        autoDca = _autoDca;
         ops = _ops;
         setUpTask(_autoDca, _ops);
     }
@@ -33,8 +35,8 @@ contract BalanceHolder {
 
     function deposit(address user) external payable onlyManager {
         balances[user] += msg.value;
-        ITaskTreasury taskTreasury =  ops.taskTreasury();
-       taskTreasury.depositFunds{value: msg.value}(address(this), ETH, msg.value);
+        ITaskTreasury taskTreasury = ops.taskTreasury();
+        taskTreasury.depositFunds{value: msg.value}(autoDca, ETH, msg.value);
     }
 
     function deductSwapBalance(address user, uint256 cost) external onlyManager {

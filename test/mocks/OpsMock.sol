@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
-contract OpsMock {
 
+contract OpsMock {
     address tt;
 
     function taskTreasury() external returns (address) {
@@ -18,5 +18,4 @@ contract OpsMock {
     function setTaskTreasury(address _taskTreasury) external {
         tt = _taskTreasury;
     }
-    
 }

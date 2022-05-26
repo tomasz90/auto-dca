@@ -2,6 +2,5 @@
 pragma solidity ^0.8.0;
 
 contract Mock {
-
-    function mockTransaction() external { }
+    function mockTransaction() external {}
 }
