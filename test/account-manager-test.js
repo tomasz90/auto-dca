@@ -2,6 +2,7 @@ const AccountManager = artifacts.require("AccountManager");
 
 const UniswapV3FactoryMock = artifacts.require("UniswapV3FactoryMock");
 const OpsMock = artifacts.require("OpsMock");
+const TaskTreasuryMock = artifacts.require("TaskTreasuryMock");
 const ERC20Mock = artifacts.require("ERC20Mock");
 
 const {assertRevert, sleep, randomAddress} = require("./helpers");
@@ -10,6 +11,7 @@ contract("AccountManager", (accounts) => {
     let accountManager;
     let uniswapV3Factory;
     let ops;
+    let taskTreasury;
 
     let nullAddress = "0x0000000000000000000000000000000000000000";
 
@@ -19,6 +21,8 @@ contract("AccountManager", (accounts) => {
 
         uniswapV3Factory = await UniswapV3FactoryMock.new();
         ops = await OpsMock.new();
+        taskTreasury = await TaskTreasuryMock.new();
+        await ops.setTaskTreasury(taskTreasury.address);
         accountManager = await AccountManager.new(autoDcaAddress, uniswapV3Factory.address, ops.address);
         token0 = await ERC20Mock.new();
         token1 = await ERC20Mock.new();
@@ -28,6 +32,7 @@ contract("AccountManager", (accounts) => {
         let amount = 100;
         await uniswapV3Factory.setPool(poolAddress);
         await accountManager.setUpAccount(interval, amount, token0.address, token1.address);
+        
     });
 
     it("should set up an account", async () => {
@@ -215,14 +220,12 @@ contract("AccountManager", (accounts) => {
     it("should deposit funds to task tresury", async () => {
         // given
         let gwei = 1000000000;
-        let treasuryAddress = randomAddress();
-        ops.setTaskTreasury(treasuryAddress);
 
         // when
         await accountManager.deposit({value: gwei});
 
         // then
-        let balance = await web3.eth.getBalance(treasuryAddress);
+        let balance = await web3.eth.getBalance(taskTreasury.address);
         assert.equal(gwei, balance);
     });
 });

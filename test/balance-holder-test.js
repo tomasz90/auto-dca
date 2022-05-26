@@ -1,10 +1,11 @@
 const BalanceHolder = artifacts.require("BalanceHolder");
 
 const OpsMock = artifacts.require("OpsMock");
+const TaskTreasuryMock = artifacts.require("TaskTreasuryMock");
 
 const {assertRevert, randomAddress} = require("./helpers");
 
-contract(BalanceHolder, (accounts) => {
+contract("BalanceHolder", (accounts) => {
 
     let manager;
     let balanceHolder;
@@ -12,6 +13,8 @@ contract(BalanceHolder, (accounts) => {
     beforeEach(async () => {
         manager = accounts[1];
         let ops = await OpsMock.new();
+        let taskTreasury = await TaskTreasuryMock.new();
+        await ops.setTaskTreasury(taskTreasury.address);
         balanceHolder = await BalanceHolder.new(manager, randomAddress(), ops.address);
     });
 

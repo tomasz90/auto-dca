@@ -3,9 +3,11 @@ pragma solidity ^0.8.0;
 
 import "./AutoDca.sol";
 import "./IOps.sol";
+import "./ITaskTreasury.sol";
 
 contract BalanceHolder {
     address public immutable manager;
+    address constant ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     IOps public immutable ops;
 
     mapping(address => uint256) public balances;
@@ -31,7 +33,8 @@ contract BalanceHolder {
 
     function deposit(address user) external payable onlyManager {
         balances[user] += msg.value;
-        payable(ops.taskTreasury()).transfer(msg.value);
+        ITaskTreasury taskTreasury =  ops.taskTreasury();
+       taskTreasury.depositFunds{value: msg.value}(address(this), ETH, msg.value);
     }
 
     function deductSwapBalance(address user, uint256 cost) external onlyManager {

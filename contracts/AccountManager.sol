@@ -51,7 +51,7 @@ contract AccountManager {
         uint256 amount,
         IERC20 sellToken,
         IERC20 buyToken
-    ) external payable {
+    ) external {
         uint24 poolFee = findPoolFee(sellToken, buyToken);
         AccountParams memory params = AccountParams(
             interval,
@@ -66,7 +66,6 @@ contract AccountManager {
             accounts.push(msg.sender);
         }
         accountsParams[msg.sender] = params;
-        deposit();
     }
 
     function deposit() public payable {
