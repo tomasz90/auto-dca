@@ -12,15 +12,13 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@aave/core-v3": "^1.13.1",
-    "@aave/periphery-v3": "^1.10.0",
-    "@chainlink/contracts": "^0.4.1",
     "@openzeppelin/contracts": "^4.6.0",
     "@truffle/hdwallet-provider": "^2.0.8",
     "@uniswap/v3-core": "^1.0.1",
     "@uniswap/v3-periphery": "^1.4.1",
     "dotenv": "^16.0.1",
     "ganache-core": "^2.13.2",
+    "solc": "^0.8.14-fixed",
     "truffle-contract-size": "^2.0.1",
     "truffle-plugin-verify": "^0.5.25"
   },
