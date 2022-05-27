@@ -143,8 +143,7 @@ contract AccountManager {
 
     function getToken(address user) external onlyAutoDca {
         AccountParams memory account = accountsParams[user];
-        account.buyToken.transferFrom(user, autoDca, account.amount);
-        account.buyToken.transfer(autoDca, account.amount);
+        account.sellToken.transferFrom(user, autoDca, account.amount);
     }
 
     function isExecTime(address user) public view returns (bool) {
