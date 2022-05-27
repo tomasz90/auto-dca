@@ -32,7 +32,6 @@ contract("AccountManager", (accounts) => {
         let amount = 100;
         await uniswapV3Factory.setPool(poolAddress);
         await accountManager.setUpAccount(interval, amount, token0.address, token1.address);
-        
     });
 
     it("should set up an account", async () => {

@@ -6,7 +6,6 @@ const TaskTreasuryMock = artifacts.require("TaskTreasuryMock");
 const {assertRevert, randomAddress} = require("./helpers");
 
 contract("BalanceHolder", (accounts) => {
-
     let manager;
     let balanceHolder;
 
@@ -29,7 +28,7 @@ contract("BalanceHolder", (accounts) => {
         // then
         let balance = await balanceHolder.balances.call(user);
         assert.equal(balance, gwei);
-    })
+    });
 
     it("should create user balance", async () => {
         // given
@@ -43,7 +42,7 @@ contract("BalanceHolder", (accounts) => {
         // then
         let balance = await balanceHolder.balances.call(user);
         assert.equal(balance, 2 * gwei);
-    })
+    });
 
     it("Not manager should not be able to deduct balance", async () => {
         // given
@@ -55,5 +54,5 @@ contract("BalanceHolder", (accounts) => {
 
         // then
         assertRevert(deduct);
-    })
+    });
 });
