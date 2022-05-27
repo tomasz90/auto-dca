@@ -2,9 +2,7 @@ const fs = require('fs');
 const path = require("path");
 const solc = require('solc');
 
-require("dotenv").config();
-
-function compileAll(mainContract) {
+module.exports = function compileAll(mainContract) {
     let contract = mainContract + '.sol'
     resolved = path.resolve('contracts', contract);
     let source = fs.readFileSync(resolved, 'utf8');
@@ -25,19 +23,17 @@ function compileAll(mainContract) {
         }
       };
 
-      function readContractsFrom(dir) {
+      function readContractsFrom(dir, relativePath) {
         const absolutePath = path.resolve(dir, relativePath);
         return fs.readFileSync(absolutePath, 'utf8');
       }
       
       function findImports(relativePath) {
-        const absolutePath1 = path.resolve('contracts', relativePath);
-        const absolutePath2 = path.resolve('node_modules', relativePath);
         let source;
         try {
-            source = fs.readFileSync(absolutePath1, 'utf8');
+            source = readContractsFrom('contracts', relativePath);
         } catch(error) {
-            source = fs.readFileSync(absolutePath2, 'utf8');
+            source = readContractsFrom('node_modules', relativePath);
         }     
         return { contents: source };
       }
@@ -45,8 +41,5 @@ function compileAll(mainContract) {
       var output = JSON.parse(
         solc.compile(JSON.stringify(input), { import: findImports })
       );
-
-    console.log(output);
+      return output;
 }
-
-compileAll("AutoDca");
