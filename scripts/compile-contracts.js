@@ -44,8 +44,8 @@ module.exports = function compileAll(mainContract) {
 
     for (const value of Object.values(output.contracts)) {
         for (const [contractName, details] of Object.entries(value)) {
-            let bytecode = details.evm.bytecode.object;
             let abi = details.abi;
+            let bytecode = details.evm.bytecode.object;
 
             let contract = {};
             contract["abi"] = abi;
