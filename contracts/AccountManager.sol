@@ -163,7 +163,7 @@ contract AccountManager {
         IERC20 sellToken,
         uint256 amount
     ) public view returns (bool) {
-        uint256 allowance = sellToken.allowance(user, autoDca);
+        uint256 allowance = sellToken.allowance(user, address(this));
         return sellToken.balanceOf(user) > amount && allowance > amount;
     }
 
