@@ -150,11 +150,11 @@ contract AccountManager {
         return accountsParams[user].nextExec < block.timestamp;
     }
 
-    function isExisting() private view returns (bool) {
+    function isExisting() public view returns (bool) {
         return accountsParams[msg.sender].nextExec != 0;
     }
 
-    function isTransactable(address user) private view returns (bool) {
+    function isTransactable(address user) public view returns (bool) {
         return balanceHolder.balances(user) > maxSwapCost * tx.gasprice;
     }
 
@@ -162,7 +162,7 @@ contract AccountManager {
         address user,
         IERC20 sellToken,
         uint256 amount
-    ) private view returns (bool) {
+    ) public view returns (bool) {
         uint256 allowance = sellToken.allowance(user, autoDca);
         return sellToken.balanceOf(user) > amount && allowance > amount;
     }

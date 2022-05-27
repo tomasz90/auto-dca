@@ -7,7 +7,6 @@ import "./ITaskTreasury.sol";
 
 contract BalanceHolder {
     address public immutable manager;
-    address public immutable autoDca;
     address constant ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     IOps public immutable ops;
 
@@ -24,7 +23,6 @@ contract BalanceHolder {
         IOps _ops
     ) {
         manager = _manager;
-        autoDca = _autoDca;
         ops = _ops;
         setUpTask(_autoDca, _ops);
     }
