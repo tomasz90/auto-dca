@@ -3,6 +3,8 @@ const compileAll = require("./compile-contracts");
 
 require("dotenv").config();
 
+main();
+
 async function main() {
     // given for Rinkeby:
     const rpc = "https://rinkeby.infura.io/v3/" + process.env.INFURA_API_KEY;
@@ -51,5 +53,3 @@ async function deployContracts(contracts, uniswapRouter, uniswapFactory, ops, wa
 
     return contract;
 }
-
-main();

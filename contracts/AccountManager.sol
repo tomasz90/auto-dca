@@ -31,6 +31,10 @@ contract AccountManager {
         bool paused;
     }
 
+    event SetUpAccount(address account, uint256 interval, uint256 amount, address sellToken, address buyToken);
+    event Deposit(address account, uint256 value);
+    event DeductBalance(address account, uint256 value);
+
     modifier onlyAutoDca() {
         require(msg.sender == autoDca, "Caller is not the autoDca");
         _;
@@ -66,15 +70,18 @@ contract AccountManager {
             accounts.push(msg.sender);
         }
         accountsParams[msg.sender] = params;
+        emit SetUpAccount(msg.sender, interval, amount, address(sellToken), address(buyToken));
     }
 
     function deposit() public payable {
         require(isExisting(), "Set up an account first");
         balanceHolder.deposit{value: msg.value}(msg.sender);
+        emit Deposit(msg.sender, msg.value);
     }
 
     function deductSwapBalance(address user, uint256 cost) external onlyAutoDca {
         balanceHolder.deductSwapBalance(user, cost);
+        emit DeductBalance(user, cost);
     }
 
     function setInterval(uint256 interval) external {
