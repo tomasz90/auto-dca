@@ -2,8 +2,20 @@
 
 DCA - this is one of the simplest investment strategy in which an investor divides up the total amount to be invested across periodic purchases of a target asset in an effort to reduce the impact of volatility on the overall purchase. The term was coined by Benjamin Graham.
 
-Developed app helps to automate this strategy. User has to deploy contracts on any EVM chain supported by Gelato Network (Ethereum, Polygon, Fantom, Avax and few others). Next user need to setup account which could done by calling function  ```setUpAccount(interval,amount,sellToken,buyToken) ``` on AccountManager instance. Then user has to deposit some funds on AccountManager to cover future transaction fees. Lastly user has to give approval for AccountManager contract address.
-After all these steps Gellato will do the rest, it will be investing your stablecoins (or the other tokens) in a constant intervals. I've prepared ready to use automation script -> set-up-account.js
+Developed app helps to automate this strategy. User can specify his interval of investment, token that will be sold and token that will be bought.
+
+There are two ways to use this app:
+
+1. Use automation script, which I've prepared -> set-up-account.js
+
+2. Manual setting up:
+
+    * User has to deploy contracts on any EVM chain supported by Gelato Network (Ethereum, Polygon, Fantom, Avax and few others). 
+    * Next user need to setup account which could done by calling function  ```setUpAccount(interval,amount,sellToken,buyToken) ``` on AccountManager instance. 
+    * Then user has to deposit some funds on AccountManager to cover future transaction fees. 
+    * And lastly user has to give approval for AccountManager contract address.
+
+After all these steps Gellato will do the rest, it will be investing your stablecoins (or the other tokens) in a constant intervals.
 
 In this example we invest 1 Dai every 2 min trading for WETH (Rinkeby test network):
 
