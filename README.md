@@ -11,7 +11,7 @@ There are two ways to use this app:
 2. Manual setting up:
 
     * User has to deploy contracts on any EVM chain supported by Gelato Network (Ethereum, Polygon, Fantom, Avax and few others). 
-    * Next user need to setup account which could done by calling function  ```setUpAccount(interval,amount,sellToken,buyToken) ``` on AccountManager instance. 
+    * Next user need to setup account which could done by calling function  ```setUpAccount(interval,amount,sellToken,buyToken)``` on AccountManager instance. 
     * Then user has to deposit some funds on AccountManager to cover future transaction fees. 
     * And lastly user has to give approval for AccountManager contract address.
 
