@@ -15,7 +15,7 @@ contract AutoDca {
     uint256 public counter;
 
     AccountManager public immutable manager;
-    ISwapRouter router;
+    ISwapRouter public immutable router;
     IOps public immutable ops;
 
     event Execution(address account, address tokenBought, uint256 amountBought);

@@ -6,20 +6,19 @@ const TaskTreasuryMock = artifacts.require("TaskTreasuryMock");
 const {assertRevert, randomAddress} = require("./helpers");
 
 contract("BalanceHolder", (accounts) => {
-    let manager;
+    let manager = accounts[0];
     let balanceHolder;
 
     beforeEach(async () => {
-        manager = accounts[1];
         let ops = await OpsMock.new();
         let taskTreasury = await TaskTreasuryMock.new();
         await ops.setTaskTreasury(taskTreasury.address);
-        balanceHolder = await BalanceHolder.new(manager, randomAddress(), ops.address);
+        balanceHolder = await BalanceHolder.new(randomAddress(), ops.address);
     });
 
     it("should create user balance", async () => {
         // given
-        let user = accounts[0];
+        let user = accounts[1];
         let gwei = 1000000000;
 
         // when
@@ -32,7 +31,7 @@ contract("BalanceHolder", (accounts) => {
 
     it("should create user balance", async () => {
         // given
-        let user = accounts[0];
+        let user = accounts[1];
         let gwei = 1000000000;
         await balanceHolder.deposit(user, {value: gwei, from: manager});
 
@@ -46,7 +45,7 @@ contract("BalanceHolder", (accounts) => {
 
     it("Not manager should not be able to deduct balance", async () => {
         // given
-        let notManager = accounts[0];
+        let notManager = accounts[1];
         let gwei = 1000000000;
 
         // when

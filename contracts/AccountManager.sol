@@ -5,17 +5,16 @@ import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
-import "./AutoDca.sol";
 import "./BalanceHolder.sol";
 import "./IOps.sol";
 
-contract AccountManager {
+contract AccountManager is Ownable {
     mapping(address => AccountParams) public accountsParams;
     address[] public accounts;
 
-    address public immutable autoDca;
     IUniswapV3Factory public immutable uniswapFactory;
     BalanceHolder public immutable balanceHolder;
 
@@ -35,19 +34,13 @@ contract AccountManager {
     event Deposit(address account, uint256 value);
     event DeductBalance(address account, uint256 value);
 
-    modifier onlyAutoDca() {
-        require(msg.sender == autoDca, "Caller is not the autoDca");
-        _;
-    }
-
     constructor(
-        address _autoDca,
+        address autoDcaAddress, 
         IUniswapV3Factory _uniswapFactory,
         IOps _ops
     ) {
-        autoDca = _autoDca;
         uniswapFactory = _uniswapFactory;
-        balanceHolder = new BalanceHolder(address(this), _autoDca, _ops);
+        balanceHolder = new BalanceHolder(autoDcaAddress, _ops);
     }
 
     function setUpAccount(
@@ -79,7 +72,7 @@ contract AccountManager {
         emit Deposit(msg.sender, msg.value);
     }
 
-    function deductSwapBalance(address user, uint256 cost) external onlyAutoDca {
+    function deductSwapBalance(address user, uint256 cost) external onlyOwner {
         balanceHolder.deductSwapBalance(user, cost);
         emit DeductBalance(user, cost);
     }
@@ -116,7 +109,7 @@ contract AccountManager {
         }
     }
 
-    function setNextExec(address user) external onlyAutoDca {
+    function setNextExec(address user) external onlyOwner {
         accountsParams[user].nextExec += accountsParams[user].interval;
     }
 
@@ -148,9 +141,9 @@ contract AccountManager {
         }
     }
 
-    function getToken(address user) external onlyAutoDca {
+    function getToken(address user) external onlyOwner {
         AccountParams memory account = accountsParams[user];
-        account.sellToken.transferFrom(user, autoDca, account.amount);
+        account.sellToken.transferFrom(user, owner(), account.amount);
     }
 
     function isExecTime(address user) public view returns (bool) {
