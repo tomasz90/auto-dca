@@ -2,7 +2,7 @@
 
 DCA - this is one of the simplest investment strategy in which an investor divides up the total amount to be invested across periodic purchases of a target asset in an effort to reduce the impact of volatility on the overall purchase. The term was coined by Benjamin Graham.
 
-Developed app helps to automate this strategy. User can specify his interval of investment, token that will be sold and token that will be bought.
+Developed app helps to automate this strategy thanks to Gelato Network. User can specify his interval of investment, token that will be sold and token that will be bought.
 
 There are two ways to use this app:
 
@@ -15,7 +15,7 @@ There are two ways to use this app:
     * Then user has to deposit some funds on AccountManager to cover future transaction fees. 
     * And lastly user has to give approval for AccountManager contract address.
 
-After all these steps Gellato will do the rest, it will be investing your stablecoins (or the other tokens) in a constant intervals.
+After all these steps Gelato will do the rest, it will be investing your stablecoins (or the other tokens) in a constant intervals.
 
 In this example we invest 1 Dai every 2 min trading for WETH (Rinkeby test network):
 
